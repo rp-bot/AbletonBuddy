@@ -1,11 +1,11 @@
-from ableton_agent.tools.osc import (
-    AbletonSongQueryTool,
-    AbletonSongCommandTool,
-    AbletonTestTool,
+from src.tools.osc import (
+    query_ableton,
+    control_ableton,
+    test_connection,
 )
 
 __all__ = [
-    'AbletonSongQueryTool',
-    'AbletonSongCommandTool',
-    'AbletonTestTool',
+    'query_ableton',
+    'control_ableton',
+    'test_connection',
 ]

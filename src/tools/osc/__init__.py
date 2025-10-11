@@ -1,14 +1,14 @@
-from ableton_agent.tools.osc.client import OSCClient, OSCResponse
-from ableton_agent.tools.osc.song_tools import (
-    AbletonSongQueryTool,
-    AbletonSongCommandTool,
-    AbletonTestTool,
+from src.tools.osc.client import OSCClient, OSCResponse
+from src.tools.osc.song_tools import (
+    query_ableton,
+    control_ableton,
+    test_connection,
 )
 
 __all__ = [
     'OSCClient',
     'OSCResponse',
-    'AbletonSongQueryTool',
-    'AbletonSongCommandTool',
-    'AbletonTestTool',
+    'query_ableton',
+    'control_ableton',
+    'test_connection',
 ]
