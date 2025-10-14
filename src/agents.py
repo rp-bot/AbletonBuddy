@@ -21,7 +21,7 @@ class APICategory(Enum):
     DEVICE = "Device API - Instrument and effect control: device lists, device parameters, types and per-device property queries."
 
 
-def classify_user_input(user_input: str) -> List[APICategory]:
+def classify_user_input(user_input: str, thread: marvin.Thread | None = None) -> List[APICategory]:
     """
     Classify user input into one or more API categories using Marvin's classify function.
 
@@ -71,6 +71,7 @@ def classify_user_input(user_input: str) -> List[APICategory]:
         labels=label_names,
         multi_label=True,
         instructions=guidance,
+        thread=thread,
     )
 
     # Convert the result back to the enum
@@ -88,7 +89,8 @@ def _instruction_for_category(category: APICategory) -> str:
         f"Task: From the user's Ableton Live request, extract the EXACT substring(s) that pertain to {category} API category.\n\n"
         "Constraints:\n"
         "- Return exact substrings from the user's text. Do NOT paraphrase or infer.\n"
-        "- If nothing clearly applies to this category, return an empty list.\n\n"
+        "- If nothing clearly applies to this category, return an empty list.\n"
+        "- Include both ACTION requests (commands to do something) and STATUS requests (queries for information).\n\n"
         "Disambiguation:\n"
         "- Ignore unrelated filler or commentary that does not change the concrete request.\n"
         "- Prefer the most specific spans that still read as self-contained instructions.\n\n"
@@ -100,7 +102,7 @@ def _instruction_for_category(category: APICategory) -> str:
             "Category focus:\n"
             "- Live application lifecycle and environment (startup, errors, logs).\n"
             "- Application metadata (e.g., Live version).\n"
-            "Examples: 'show the last error in the log', 'what Live version is running'."
+            "Examples: 'show the last error in the log', 'what Live version is running', 'check if Live is running', 'show application status'."
         ),
         APICategory.SONG.name: (
             "\nSONG API category\n"
@@ -108,55 +110,55 @@ def _instruction_for_category(category: APICategory) -> str:
             "- Global transport/session: play/stop/resume, tempo, metronome, cue points, song position, stop all clips.\n"
             "- Scene/track creation/duplication/deletion when framed as global song ops.\n"
             "- Navigation by beats/bars, tap tempo, undo/redo.\n"
-            "Examples: 'start playback', 'set tempo to 123', 'stop all clips'."
+            "Examples: 'start playback', 'set tempo to 123', 'stop all clips', 'what's the current tempo', 'show song status', 'is playback running'."
         ),
         APICategory.VIEW.name: (
             "\nVIEW API category\n"
             "Category focus:\n"
             "- UI selection/navigation: get/set selected track, scene, clip, device.\n"
             "- Start/stop listening to selected items or change what is selected.\n"
-            "Examples: 'select the next scene', 'focus the selected clip'."
+            "Examples: 'select the next scene', 'focus the selected clip', 'what's currently selected', 'show selected track'."
         ),
         APICategory.TRACK.name: (
             "\nTRACK API category\n"
             "Category focus:\n"
             "- Per-track mix/control: arm/mute/solo, volume, pan, sends, stop all clips on a track.\n"
             "- Track properties: names, meters, routing, devices on a track, clip lists.\n"
-            "Examples: 'mute track 2', 'arm bass track', 'set track 1 pan left'."
+            "Examples: 'mute track 2', 'arm bass track', 'set track 1 pan left', 'show all tracks', 'what tracks are armed', 'show track 1 volume'."
         ),
         APICategory.CLIP_SLOT.name: (
             "\nCLIP_SLOT API category\n"
             "Category focus:\n"
             "- Slot container operations: create/delete a clip in a slot, check slot has clip, duplicate to another slot, fire a slot.\n"
-            "Examples: 'create a new clip in track 2, slot 1', 'does slot 3 have a clip'."
+            "Examples: 'create a new clip in track 2, slot 1', 'does slot 3 have a clip', 'show all clip slots', 'what clips are in track 1'."
         ),
         APICategory.CLIP.name: (
             "\nCLIP API category\n"
             "Category focus:\n"
             "- Individual clip control/content: launch/stop, loop start/end, length, start/end markers, notes add/remove/get.\n"
             "- Clip properties: gain, color, name, is playing/recording, warping, playing position.\n"
-            "Examples: 'loop this clip from bar 5', 'add notes to the clip'."
+            "Examples: 'loop this clip from bar 5', 'add notes to the clip', 'what clips are playing', 'show clip properties', 'is this clip recording'."
         ),
         APICategory.SCENE.name: (
             "\nSCENE API category\n"
             "Category focus:\n"
             "- Scene actions/properties: trigger selected/next/specific scene, create/duplicate/delete scenes.\n"
             "- Scene metadata: name/color, tempo/time signature enable and values.\n"
-            "Examples: 'launch scene 3', 'duplicate the current scene'."
+            "Examples: 'launch scene 3', 'duplicate the current scene', 'show all scenes', 'what scene is selected', 'list scene names'."
         ),
         APICategory.DEVICE.name: (
             "\nDEVICE API category\n"
             "Category focus:\n"
             "- Instrument/effect device control and queries: device lists/types, parameter counts, get/set parameter values, ranges, quantization.\n"
             "- When scoped to a specific track/device chain.\n"
-            "Examples: 'increase reverb dry/wet', 'set cutoff to 2 kHz on track 1'."
+            "Examples: 'increase reverb dry/wet', 'set cutoff to 2 kHz on track 1', 'show all devices on track 1', 'what effects are loaded', 'list device parameters'."
         ),
     }
 
     return base + specifics.get(category, "")
 
 
-def extract_user_request(user_input: str, categories: List[APICategory]) -> List[Tuple[APICategory, str]]:
+def extract_user_request(user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None) -> List[Tuple[APICategory, str]]:
     """
     For each provided API category, extract the slice of the user's input that
     corresponds to that category using marvin.extract, returning a list of
@@ -182,52 +184,24 @@ def extract_user_request(user_input: str, categories: List[APICategory]) -> List
         Output: [(APICategory.VIEW, "select the next scene"), (APICategory.SONG, "start playback")]
     """
     extracted_requests: List[Tuple[APICategory, str]] = []
-    for category in categories:
-        instructions = _instruction_for_category(category)
+    with thread:
+        for category in categories:
+            instructions = _instruction_for_category(category)
 
-        spans = marvin.extract(user_input, str, instructions=instructions)
-        extracted_requests.append((category, spans))
+            spans = marvin.extract(user_input, str, instructions=instructions)
+            extracted_requests.append((category, spans))
 
     return extracted_requests
 
 
 
-
-def create_song_agent() -> marvin.Agent:
+def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> str:
     """
-    Create the song agent that handles Ableton Live control via OSC tools.
-    This is a skeleton for future implementation.
-    """
-    return marvin.Agent(
-        name="Song Agent",
-        instructions="""
-        You are the Song Agent for Ableton Pal, specialized in controlling Ableton Live.
-        
-        Your role is to:
-        1. Execute Ableton Live commands via OSC
-        2. Query Ableton Live session information
-        3. Help users with specific Ableton Live operations
-        4. Provide feedback on Ableton Live state and operations
-        
-        Available tools:
-        - query_ableton: Get information about the current session
-        - control_ableton: Execute commands in Ableton Live
-        - test_connection: Verify connection to Ableton Live
-        
-        Always check connection status before attempting operations.
-        Provide clear feedback about what operations were performed.
-        """,
-        description="Handles Ableton Live control via OSC tools",
-        tools=[query_ableton, control_ableton, test_connection]
-    )
-
-
-def remove_ambiguity(user_input: str) -> str:
-    """
-    Remove ambiguity from user input by resolving pronouns and unclear references.
+    Remove ambiguity from user input by resolving pronouns, unclear references, and incomplete commands.
     
     Args:
-        user_input: The user's input text that may contain ambiguous references
+        user_input: The user's input text that may contain ambiguous references or incomplete commands
+        thread: Optional Marvin thread for context
         
     Returns:
         str: The user input with all ambiguous references resolved, or a message if cannot be disambiguated
@@ -239,25 +213,42 @@ def remove_ambiguity(user_input: str) -> str:
         Input: "create a clip in track 1, then duplicate it."
         Output: "create a clip in track 1, then duplicate the clip in track 1."
         
-        Input: "do something with that thing"
-        Output: "NEED_MORE_CONTEXT: Please specify what 'that thing' refers to (track number, clip name, device, etc.). Original: do something with that thing"
+        Input: "change the tempo"
+        Output: "NEED_MORE_CONTEXT: Please specify the tempo value (e.g., 'change the tempo to 120 BPM'). Original: change the tempo"
+        
+        Input: "solo track"
+        Output: "NEED_MORE_CONTEXT: Please specify which track to solo (e.g., 'solo track 1' or 'solo the bass track'). Original: solo track"
     """
     instructions = (
-        "Task: Remove ambiguity from the user's input by resolving all pronouns and unclear references.\n\n"
+        "Task: Remove ambiguity from the user's input by resolving all pronouns, unclear references, and incomplete commands.\n\n"
         "Rules:\n"
         "- Replace pronouns (it, this, that, them, etc.) with the specific noun they refer to.\n"
         "- Replace vague references with the specific items they refer to.\n"
+        "- Detect incomplete commands that are missing required values or parameters.\n"
         "- Maintain the original meaning and intent.\n"
         "- Keep the same tone and style as the original input.\n"
         "- If a reference is unclear, make a reasonable inference based on context.\n"
         "- Preserve all specific details like track numbers, scene numbers, etc.\n\n"
-        "If the input cannot be disambiguated due to insufficient context or unclear references, "
+        "Common incomplete commands that need clarification:\n"
+        "- 'change the tempo' → needs tempo value (e.g., 'to 120 BPM')\n"
+        "- 'solo track' → needs track identifier (e.g., 'track 1' or 'bass track')\n"
+        "- 'mute track' → needs track identifier\n"
+        "- 'arm track' → needs track identifier\n"
+        "- 'set volume' → needs volume value and track identifier\n"
+        "- 'set pan' → needs pan value and track identifier\n"
+        "- 'create clip' → needs track and slot information\n"
+        "- 'launch scene' → needs scene identifier\n"
+        "- 'set reverb' → needs reverb value and target device/track\n"
+        "- 'add effect' → needs effect name and target track\n"
+        "- 'record' → needs clarification (track, clip, etc.)\n"
+        "- 'play' → needs clarification (track, clip, scene, etc.)\n"
+        "- 'stop' → needs clarification (track, clip, all clips, etc.)\n\n"
+        "If the input cannot be disambiguated due to insufficient context, unclear references, or missing required values, "
         "return a helpful message starting with 'NEED_MORE_CONTEXT: ' followed by specific guidance on what information is needed, then the original input.\n\n"
         "Examples:\n"
         "- 'select track 3, arm it' → 'select track 3, arm track 3'\n"
         "- 'create a clip, then duplicate it' → 'create a clip, then duplicate the clip'\n"
         "- 'mute that track and solo this one' → 'mute track 2 and solo track 1' (if context suggests track numbers)\n"
-        "- 'do something with that thing' → 'NEED_MORE_CONTEXT: Please specify what 'that thing' refers to (track number, clip name, device, etc.). Original: do something with that thing'\n\n"
         "Input:\n"
         f"{user_input}\n\n"
         "Return only the disambiguated text or the NEED_MORE_CONTEXT message, no additional commentary."
@@ -266,13 +257,45 @@ def remove_ambiguity(user_input: str) -> str:
     return marvin.run(
         instructions=instructions,
         result_type=str,
+        thread=thread,
     )
 
 
-def get_available_agents() -> List[marvin.Agent]:
+def is_ambiguous_input(user_input: str) -> bool:
     """
-    Get a list of all available agents in the system.
+    Check if the user input is too ambiguous and needs clarification.
+    
+    Args:
+        user_input: The user's input text to check
+        
+    Returns:
+        bool: True if the input is ambiguous and needs clarification, False otherwise
     """
-    return [
-        create_song_agent()
-    ]
+    return user_input.startswith("NEED_MORE_CONTEXT:")
+
+
+def handle_ambiguous_input(user_input: str) -> str:
+    """
+    Handle ambiguous input by asking the user for clarification.
+    
+    Args:
+        user_input: The ambiguous user input that starts with "NEED_MORE_CONTEXT:"
+        
+    Returns:
+        str: A user-friendly message asking for clarification
+    """
+    if not is_ambiguous_input(user_input):
+        return user_input
+    
+    # Extract the clarification request from the NEED_MORE_CONTEXT message
+    # The format is: "NEED_MORE_CONTEXT: [clarification request]. Original: [original input]"
+    parts = user_input.split("Original:")
+    if len(parts) > 1:
+        clarification_request = parts[0].replace("NEED_MORE_CONTEXT:", "").strip()
+        original_input = parts[1].strip()
+        
+        return f"I need more information to help you. {clarification_request}\n\nYour original request: '{original_input}'\n\nPlease provide more specific details and I'll be happy to help!"
+    else:
+        # Fallback if the format is unexpected
+        return f"I need more information to help you. {user_input}\n\nPlease provide more specific details and I'll be happy to help!"
+

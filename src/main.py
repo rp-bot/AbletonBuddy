@@ -2,8 +2,9 @@
 Ableton Pal - CLI chat interface with Marvin orchestrator agent.
 """
 import marvin
-from agents import classify_user_input, extract_user_request, remove_ambiguity
-
+from agents import classify_user_input, extract_user_request, remove_ambiguity, is_ambiguous_input, handle_ambiguous_input
+from marvin.engine.llm import UserMessage, AgentMessage
+from marvin import Task
 
 def main():
     """
@@ -24,6 +25,8 @@ def main():
             # Get user input
             user_input = input("\nYou: ").strip()
 
+            
+
             # Check for exit commands
             if user_input.lower() in ['quit', 'exit', 'bye', 'goodbye']:
                 print("\n👋 Goodbye! Thanks for using Ableton Pal!")
@@ -34,18 +37,31 @@ def main():
                 continue
 
             try:
+                thread.add_messages(
+                    [UserMessage(content=user_input)]
+                )
                 # Remove ambiguity from user input first
-                disambiguated_input = remove_ambiguity(user_input)
-                print(f"\nUser Input: {user_input}")
-                print(f"\nDisambiguated: {disambiguated_input}")
+                disambiguated_input = remove_ambiguity(user_input, thread)
+
+                # Check if the input is still ambiguous and needs clarification
+                if is_ambiguous_input(disambiguated_input):
+                    # Handle ambiguous input by asking user for clarification
+                    clarification_message = handle_ambiguous_input(disambiguated_input)
+                    print(f"\n🤔 {clarification_message}")
+                    continue  # Skip processing and wait for user's next input
                 
                 # Classify the user input
-                api_categories = classify_user_input(disambiguated_input)
-                user_requests = extract_user_request(disambiguated_input, api_categories)
+                api_categories = classify_user_input(disambiguated_input, thread)
+                user_requests = extract_user_request(disambiguated_input, api_categories, thread)
 
-                # Get response from orchestrator
-                # response = orchestrator.say(user_input, thread=thread)
-                # print(f"\nOrchestrator: {response}")
+                # take the user_requests (list of tuples) and setup tasks for the agents
+                # for category, request in user_requests:
+                #     task = Task(
+                #         name=f"{category.name} Task",
+                #         instructions=request,
+                #         thread=thread,
+                #     )
+
                 print(f"\nUser Requests: {user_requests}")
 
             except Exception as e:
