@@ -2,8 +2,9 @@
 Marvin agent definitions for the Ableton Pal system.
 """
 import marvin
-from typing import List, Tuple
+from typing import List, Dict
 from enum import Enum
+from marvin import Task
 
 # Import tools for future use
 from tools.osc.song_tools import query_ableton, control_ableton, test_connection
@@ -158,38 +159,44 @@ def _instruction_for_category(category: APICategory) -> str:
     return base + specifics.get(category, "")
 
 
-def extract_user_request(user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None) -> List[Tuple[APICategory, str]]:
+def extract_user_request(user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None) -> Dict[APICategory, List[str]]:
     """
-    For each provided API category, extract the slice of the user's input that
-    corresponds to that category using marvin.extract, returning a list of
-    (category, exact_user_span) pairs. Empty extractions are omitted.
+    For each provided API category, extract the slices of the user's input that
+    correspond to that category using marvin.extract, returning a dictionary mapping
+    categories to lists of extracted spans.
 
     Args:
         user_input: The raw user input.
         categories: The categories to attempt extraction for (e.g., from classify_user_input).
 
     Returns:
-        List of (APICategory, str) pairs; only non-empty extractions are included.
+        Dictionary mapping APICategory to list of extracted string spans. Categories with no
+        extractions will have empty lists.
 
     Notes:
-        - The extracted string must be an exact substring of the user's input. Do not rewrite or infer.
-        - If multiple spans in the input could match a category, return the most salient single span for that category.
-        - Overlapping intents across categories are allowed and will yield multiple pairs.
+        - The extracted strings must be exact substrings of the user's input. Do not rewrite or infer.
+        - Multiple spans in the input can match a category and will all be included in the list.
+        - Overlapping intents across categories are allowed.
 
     Examples:
         Input: "change the tempo, and mute track 2"
-        Output: [(APICategory.SONG, "change the tempo"), (APICategory.TRACK, "mute track 2")]
+        Output: {
+            APICategory.SONG: ["change the tempo"],
+            APICategory.TRACK: ["mute track 2"]
+        }
 
         Input: "select the next scene and start playback"
-        Output: [(APICategory.VIEW, "select the next scene"), (APICategory.SONG, "start playback")]
+        Output: {
+            APICategory.VIEW: ["select the next scene"],
+            APICategory.SONG: ["start playback"]
+        }
     """
-    extracted_requests: List[Tuple[APICategory, str]] = []
-    with thread:
-        for category in categories:
-            instructions = _instruction_for_category(category)
+    extracted_requests: Dict[APICategory, List[str]] = {}
 
-            spans = marvin.extract(user_input, str, instructions=instructions)
-            extracted_requests.append((category, spans))
+    for category in categories:
+        instructions = _instruction_for_category(category)
+        spans = marvin.extract(user_input, str, instructions=instructions)
+        extracted_requests[category] = spans if isinstance(spans, list) else [spans]
 
     return extracted_requests
 
@@ -298,4 +305,80 @@ def handle_ambiguous_input(user_input: str) -> str:
     else:
         # Fallback if the format is unexpected
         return f"I need more information to help you. {user_input}\n\nPlease provide more specific details and I'll be happy to help!"
+
+
+def create_and_execute_tasks(user_requests: Dict[APICategory, List[str]]) -> None:
+    """
+    Create and execute tasks for each category and its associated requests.
+    
+    Args:
+        user_requests: Dictionary mapping APICategory to list of extracted request strings
+    """
+    tasks = []
+    
+    # Process each category and its associated requests
+    for category, requests in user_requests.items():
+        for request in requests:
+            # Get category-specific instructions
+            instructions = _get_category_instructions(category, request)
+            
+            tasks.append(Task(
+                name=f"{category} Task",
+                instructions=instructions,
+                tools=[query_ableton, control_ableton, test_connection],
+            ))
+
+    # Execute all tasks
+    for task in tasks:
+        task.run()
+
+
+def _get_category_instructions(category: APICategory, request: str) -> str:
+    """
+    Get category-specific instructions for task execution.
+    
+    Args:
+        category: The API category for the task
+        request: The user's request string
+        
+    Returns:
+        str: Category-specific instructions for the task
+    """
+    if category == APICategory.SONG.name:
+        return _get_song_instructions(request)
+    else:
+        raise NotImplementedError(f"Instructions for category {category} not yet implemented")
+
+
+def _get_song_instructions(request: str) -> str:
+    """
+    Get SONG API category-specific instructions.
+    
+    Args:
+        request: The user's request string
+        
+    Returns:
+        str: SONG-specific instructions for the task
+    """
+    return f"""
+You are an Ableton Live SONG API specialist. Your task is to handle global transport and session state operations.
+
+User Request: {request}
+
+Your capabilities include:
+- Global transport control: play/stop/resume, tempo changes, metronome control
+- Song position and navigation: jump to specific positions, cue points
+- Session management: stop all clips, global undo/redo
+- Song metadata: tempo queries, playback status, song position
+
+Instructions:
+1. Analyze the user's request to determine the specific SONG API operation needed
+2. Use the appropriate OSC tools to execute the operation
+3. Provide clear feedback about what was accomplished
+4. If the request involves tempo changes, ensure you specify the exact BPM value
+5. For playback operations, confirm the current state before making changes
+6. Always verify the operation was successful and report the result
+
+Focus on global session control rather than individual track or clip operations.
+"""
 

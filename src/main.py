@@ -2,9 +2,8 @@
 Ableton Pal - CLI chat interface with Marvin orchestrator agent.
 """
 import marvin
-from agents import classify_user_input, extract_user_request, remove_ambiguity, is_ambiguous_input, handle_ambiguous_input
+from agents import classify_user_input, extract_user_request, remove_ambiguity, is_ambiguous_input, handle_ambiguous_input, create_and_execute_tasks
 from marvin.engine.llm import UserMessage, AgentMessage
-from marvin import Task
 
 def main():
     """
@@ -54,13 +53,8 @@ def main():
                 api_categories = classify_user_input(disambiguated_input, thread)
                 user_requests = extract_user_request(disambiguated_input, api_categories, thread)
 
-                # take the user_requests (list of tuples) and setup tasks for the agents
-                # for category, request in user_requests:
-                #     task = Task(
-                #         name=f"{category.name} Task",
-                #         instructions=request,
-                #         thread=thread,
-                #     )
+                # Create and execute tasks
+                create_and_execute_tasks(user_requests)
 
                 print(f"\nUser Requests: {user_requests}")
 
