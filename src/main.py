@@ -2,7 +2,7 @@
 Ableton Pal - CLI chat interface with Marvin orchestrator agent.
 """
 import marvin
-from agents import create_orchestrator_agent, classify_user_input, extract_user_request
+from agents import classify_user_input, extract_user_request, remove_ambiguity
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     print("-" * 50)
 
     # Create the orchestrator agent
-    orchestrator = create_orchestrator_agent()
+    # orchestrator = create_orchestrator_agent()
 
     # Create a thread for conversation context
     thread = marvin.Thread()
@@ -34,14 +34,19 @@ def main():
                 continue
 
             try:
-                # Classify the user input first
-                api_categories = classify_user_input(user_input)
-                user_requests = extract_user_request(user_input, api_categories)
-
+                # Remove ambiguity from user input first
+                disambiguated_input = remove_ambiguity(user_input)
+                print(f"\nUser Input: {user_input}")
+                print(f"\nDisambiguated: {disambiguated_input}")
+                
+                # Classify the user input
+                api_categories = classify_user_input(disambiguated_input)
+                user_requests = extract_user_request(disambiguated_input, api_categories)
 
                 # Get response from orchestrator
-                response = orchestrator.say(user_input, thread=thread)
-                print(f"\nOrchestrator: {response}")
+                # response = orchestrator.say(user_input, thread=thread)
+                # print(f"\nOrchestrator: {response}")
+                print(f"\nUser Requests: {user_requests}")
 
             except Exception as e:
                 print(f"\n❌ Error: {e}")

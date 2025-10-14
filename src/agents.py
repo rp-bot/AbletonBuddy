@@ -191,33 +191,6 @@ def extract_user_request(user_input: str, categories: List[APICategory]) -> List
     return extracted_requests
 
 
-def create_orchestrator_agent() -> marvin.Agent:
-    """
-    Create the orchestrator agent that coordinates user requests and delegates to specialized agents.
-    """
-    return marvin.Agent(
-        name="Orchestrator",
-        instructions="""
-        You are the Orchestrator agent for Ableton Pal, a system that helps users interact with Ableton Live.
-        
-        Your role is to:
-        1. Understand user requests and determine what they want to do
-        2. Coordinate with specialized agents when needed
-        3. Provide helpful responses about music production and Ableton Live
-        4. Guide users on how to use the system effectively
-        
-        You can help with:
-        - General questions about music production
-        - Ableton Live workflow guidance
-        - Understanding what the system can do
-        - Coordinating with specialized agents for specific tasks
-        
-        Be friendly, helpful, and knowledgeable about music production and Ableton Live.
-        If a user asks about controlling Ableton Live directly, let them know that functionality
-        will be available through the Song Agent in future versions.
-        """,
-        description="Coordinates user requests and delegates to specialized agents for Ableton Live control"
-    )
 
 
 def create_song_agent() -> marvin.Agent:
@@ -249,11 +222,57 @@ def create_song_agent() -> marvin.Agent:
     )
 
 
+def remove_ambiguity(user_input: str) -> str:
+    """
+    Remove ambiguity from user input by resolving pronouns and unclear references.
+    
+    Args:
+        user_input: The user's input text that may contain ambiguous references
+        
+    Returns:
+        str: The user input with all ambiguous references resolved, or a message if cannot be disambiguated
+        
+    Examples:
+        Input: "select track 3, arm it."
+        Output: "select track 3, arm track 3."
+        
+        Input: "create a clip in track 1, then duplicate it."
+        Output: "create a clip in track 1, then duplicate the clip in track 1."
+        
+        Input: "do something with that thing"
+        Output: "NEED_MORE_CONTEXT: Please specify what 'that thing' refers to (track number, clip name, device, etc.). Original: do something with that thing"
+    """
+    instructions = (
+        "Task: Remove ambiguity from the user's input by resolving all pronouns and unclear references.\n\n"
+        "Rules:\n"
+        "- Replace pronouns (it, this, that, them, etc.) with the specific noun they refer to.\n"
+        "- Replace vague references with the specific items they refer to.\n"
+        "- Maintain the original meaning and intent.\n"
+        "- Keep the same tone and style as the original input.\n"
+        "- If a reference is unclear, make a reasonable inference based on context.\n"
+        "- Preserve all specific details like track numbers, scene numbers, etc.\n\n"
+        "If the input cannot be disambiguated due to insufficient context or unclear references, "
+        "return a helpful message starting with 'NEED_MORE_CONTEXT: ' followed by specific guidance on what information is needed, then the original input.\n\n"
+        "Examples:\n"
+        "- 'select track 3, arm it' → 'select track 3, arm track 3'\n"
+        "- 'create a clip, then duplicate it' → 'create a clip, then duplicate the clip'\n"
+        "- 'mute that track and solo this one' → 'mute track 2 and solo track 1' (if context suggests track numbers)\n"
+        "- 'do something with that thing' → 'NEED_MORE_CONTEXT: Please specify what 'that thing' refers to (track number, clip name, device, etc.). Original: do something with that thing'\n\n"
+        "Input:\n"
+        f"{user_input}\n\n"
+        "Return only the disambiguated text or the NEED_MORE_CONTEXT message, no additional commentary."
+    )
+
+    return marvin.run(
+        instructions=instructions,
+        result_type=str,
+    )
+
+
 def get_available_agents() -> List[marvin.Agent]:
     """
     Get a list of all available agents in the system.
     """
     return [
-        create_orchestrator_agent(),
         create_song_agent()
     ]
