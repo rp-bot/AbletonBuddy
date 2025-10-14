@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Optional, Union, Any, List, Annotated
 from pydantic import Field
 
-from src.tools.osc.client import OSCClient
+from tools.osc.client import OSCClient
 
 
 def query_ableton(

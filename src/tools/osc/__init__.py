@@ -1,5 +1,5 @@
-from src.tools.osc.client import OSCClient, OSCResponse
-from src.tools.osc.song_tools import (
+from tools.osc.client import OSCClient, OSCResponse
+from tools.osc.song_tools import (
     query_ableton,
     control_ableton,
     test_connection,

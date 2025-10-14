@@ -2,7 +2,7 @@
 Ableton Pal - CLI chat interface with Marvin orchestrator agent.
 """
 import marvin
-from src.agents import create_orchestrator_agent
+from agents import create_orchestrator_agent, classify_user_input, extract_user_request
 
 
 def main():
@@ -34,6 +34,11 @@ def main():
                 continue
 
             try:
+                # Classify the user input first
+                api_categories = classify_user_input(user_input)
+                user_requests = extract_user_request(user_input, api_categories)
+
+
                 # Get response from orchestrator
                 response = orchestrator.say(user_input, thread=thread)
                 print(f"\nOrchestrator: {response}")
