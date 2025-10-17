@@ -1,6 +1,7 @@
 """
 Marvin agent definitions for the Ableton Pal system.
 """
+
 import marvin
 from typing import List, Dict
 from enum import Enum
@@ -12,8 +13,9 @@ from tools.osc.song_tools import query_ableton, control_ableton, test_connection
 
 class APICategory(Enum):
     """API categories for classifying user input."""
+
     APPLICATION = "Application API - Control and query application-level state: startup/errors, logging, and Live version information."
-    SONG = "Song API - Top-level song control and global session state: play/stop, tempo, metronome, scenes, tracks, cue points, song position and bulk track/clip data queries."
+    SONG = "Song API - Global transport and session control: play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature, loop settings, recording/session_record/arrangement_overdub, undo/redo, navigation/jump, track/scene creation/deletion, groove/quantization, punch/nudge, stop_all_clips."
     VIEW = "View API - User interface and selection control: selected track/scene/clip/device and view-related events."
     TRACK = "Track API - Per-track control and inspection: volume, panning, sends, mute/solo/arm, device lists, meters and clip lists."
     CLIP_SLOT = "Clip Slot API - Clip container operations: create/delete clips, query whether a slot has a clip and manage clip slot state."
@@ -22,7 +24,9 @@ class APICategory(Enum):
     DEVICE = "Device API - Instrument and effect control: device lists, device parameters, types and per-device property queries."
 
 
-def classify_user_input(user_input: str, thread: marvin.Thread | None = None) -> List[APICategory]:
+def classify_user_input(
+    user_input: str, thread: marvin.Thread | None = None
+) -> List[APICategory]:
     """
     Classify user input into one or more API categories using Marvin's classify function.
 
@@ -41,7 +45,7 @@ def classify_user_input(user_input: str, thread: marvin.Thread | None = None) ->
         "select ALL applicable API categories that best match the intended operation(s).\n\n"
         "Categories (choose all that apply):\n"
         "- APPLICATION: Control/query Live application itself (startup/errors, logs, Live version).\n"
-        "- SONG: Global transport and session state (play/stop, tempo, metronome, scenes list, cue points, song position, bulk track/clip queries).\n"
+        "- SONG: Global transport and session state (play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature, loop settings, recording/session_record/arrangement_overdub, undo/redo, navigation/jump, track/scene creation/deletion, groove/quantization, punch/nudge, stop_all_clips).\n"
         "- VIEW: UI selection and view state (selected track/scene/clip/device, navigating/selecting in UI).\n"
         "- TRACK: Per-track operations (volume, pan, sends, mute/solo/arm, meters, devices on a track, track clip lists).\n"
         "- CLIP_SLOT: Operations on a slot that may or may not contain a clip (create/delete clip in slot, check slot state).\n"
@@ -49,7 +53,8 @@ def classify_user_input(user_input: str, thread: marvin.Thread | None = None) ->
         "- SCENE: Scene-level actions (create/duplicate/delete scenes, trigger scenes, scene indices/properties).\n"
         "- DEVICE: Instrument/effect device control and queries (device lists, parameters, device-specific properties).\n\n"
         "Disambiguation rules:\n"
-        "- If the request is about PLAY/STOP/tempo/metronome or overall session state: include SONG.\n"
+        "- If the request is about PLAY/STOP/tempo/metronome/loop/recording/navigation/undo/redo or overall session state: include SONG.\n"
+        "- If it's about track/scene creation/deletion/duplication: include SONG (prefer SONG over TRACK for global track management).\n"
         "- If it's about UI selection/navigating what is selected: include VIEW (and also the target domain when relevant).\n"
         "- If it's about a specific track's mix/arm/solo/devices: include TRACK (and DEVICE if about device params).\n"
         "- If it's about creating/deleting or checking a slot: include CLIP_SLOT.\n"
@@ -62,6 +67,7 @@ def classify_user_input(user_input: str, thread: marvin.Thread | None = None) ->
         "- 'Arm track 1 and set volume to -6 dB' => TRACK.\n"
         "- 'Select the currently playing clip' => VIEW and CLIP.\n"
         "- 'Create a new empty clip in track 2, slot 1' => CLIP_SLOT (and TRACK if relevant).\n"
+        # "- 'Create new MIDI track' => SONG (global track management).\n"
         "- 'Increase reverb dry/wet on return A device' => DEVICE (and TRACK if on a track; SONG if global).\n\n"
         "Only return labels from this set: APPLICATION, SONG, VIEW, TRACK, CLIP_SLOT, CLIP, SCENE, DEVICE.\n"
         "Be inclusive when in doubt; multi-label is allowed.\n"
@@ -77,7 +83,6 @@ def classify_user_input(user_input: str, thread: marvin.Thread | None = None) ->
 
     # Convert the result back to the enum
     return classification
-
 
 
 def _instruction_for_category(category: APICategory) -> str:
@@ -108,10 +113,15 @@ def _instruction_for_category(category: APICategory) -> str:
         APICategory.SONG.name: (
             "\nSONG API category\n"
             "Category focus:\n"
-            "- Global transport/session: play/stop/resume, tempo, metronome, cue points, song position, stop all clips.\n"
-            "- Scene/track creation/duplication/deletion when framed as global song ops.\n"
-            "- Navigation by beats/bars, tap tempo, undo/redo.\n"
-            "Examples: 'start playback', 'set tempo to 123', 'stop all clips', 'what's the current tempo', 'show song status', 'is playback running'."
+            "- Global transport: play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature.\n"
+            "- Loop control: loop on/off, loop start/length, groove amount.\n"
+            "- Recording: session_record, arrangement_overdub, record_mode, capture_midi.\n"
+            "- Navigation: jump_by, jump_to_next/prev_cue, undo/redo, back_to_arranger.\n"
+            "- Track/scene management: create/delete/duplicate tracks/scenes, create_return_track.\n"
+            "- Quantization: clip_trigger_quantization, midi_recording_quantization.\n"
+            "- Punch/nudge: punch_in/out, nudge_down/up.\n"
+            "- Global controls: stop_all_clips, session_record_status.\n"
+            "Examples: 'start playback', 'set tempo to 123', 'enable loop from bar 4', 'start session recording', 'create new MIDI track', 'set metronome on', 'jump to next cue', 'undo last action', 'stop all clips'."
         ),
         APICategory.VIEW.name: (
             "\nVIEW API category\n"
@@ -159,7 +169,9 @@ def _instruction_for_category(category: APICategory) -> str:
     return base + specifics.get(category, "")
 
 
-def extract_user_request(user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None) -> Dict[APICategory, List[str]]:
+def extract_user_request(
+    user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None
+) -> Dict[APICategory, List[str]]:
     """
     For each provided API category, extract the slices of the user's input that
     correspond to that category using marvin.extract, returning a dictionary mapping
@@ -201,28 +213,27 @@ def extract_user_request(user_input: str, categories: List[APICategory], thread:
     return extracted_requests
 
 
-
 def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> str:
     """
     Remove ambiguity from user input by resolving pronouns, unclear references, and incomplete commands.
-    
+
     Args:
         user_input: The user's input text that may contain ambiguous references or incomplete commands
         thread: Optional Marvin thread for context
-        
+
     Returns:
         str: The user input with all ambiguous references resolved, or a message if cannot be disambiguated
-        
+
     Examples:
         Input: "select track 3, arm it."
         Output: "select track 3, arm track 3."
-        
+
         Input: "create a clip in track 1, then duplicate it."
         Output: "create a clip in track 1, then duplicate the clip in track 1."
-        
+
         Input: "change the tempo"
         Output: "NEED_MORE_CONTEXT: Please specify the tempo value (e.g., 'change the tempo to 120 BPM'). Original: change the tempo"
-        
+
         Input: "solo track"
         Output: "NEED_MORE_CONTEXT: Please specify which track to solo (e.g., 'solo track 1' or 'solo the bass track'). Original: solo track"
     """
@@ -249,13 +260,21 @@ def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> st
         "- 'add effect' → needs effect name and target track\n"
         "- 'record' → needs clarification (track, clip, etc.)\n"
         "- 'play' → needs clarification (track, clip, scene, etc.)\n"
-        "- 'stop' → needs clarification (track, clip, all clips, etc.)\n\n"
+        "- 'stop' → needs clarification (track, clip, all clips, etc.)\n"
+        "- 'create track' → needs track type (e.g., 'create MIDI track' or 'create audio track')\n"
+        "- 'delete track' → needs track identifier (e.g., 'delete track 1')\n"
+        "- 'duplicate track' → needs track identifier (e.g., 'duplicate track 2')\n\n"
         "If the input cannot be disambiguated due to insufficient context, unclear references, or missing required values, "
         "return a helpful message starting with 'NEED_MORE_CONTEXT: ' followed by specific guidance on what information is needed, then the original input.\n\n"
+        "Special handling for track operations:\n"
+        "- For track creation/deletion/duplication without specific details, add 'using SONG API' to indicate global track management.\n"
+        "- Examples: 'create midi track' → 'create MIDI track using SONG API', 'delete track 1' → 'delete track using SONG API'\n\n"
         "Examples:\n"
         "- 'select track 3, arm it' → 'select track 3, arm track 3'\n"
         "- 'create a clip, then duplicate it' → 'create a clip, then duplicate the clip'\n"
         "- 'mute that track and solo this one' → 'mute track 2 and solo track 1' (if context suggests track numbers)\n"
+        "- 'create an audio track' → 'create an audio track using SONG API'\n"
+        "- 'delete track 1' → 'delete track 1 using SONG API'\n"
         "Input:\n"
         f"{user_input}\n\n"
         "Return only the disambiguated text or the NEED_MORE_CONTEXT message, no additional commentary."
@@ -271,10 +290,10 @@ def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> st
 def is_ambiguous_input(user_input: str) -> bool:
     """
     Check if the user input is too ambiguous and needs clarification.
-    
+
     Args:
         user_input: The user's input text to check
-        
+
     Returns:
         bool: True if the input is ambiguous and needs clarification, False otherwise
     """
@@ -284,79 +303,98 @@ def is_ambiguous_input(user_input: str) -> bool:
 def handle_ambiguous_input(user_input: str) -> str:
     """
     Handle ambiguous input by asking the user for clarification.
-    
+
     Args:
         user_input: The ambiguous user input that starts with "NEED_MORE_CONTEXT:"
-        
+
     Returns:
         str: A user-friendly message asking for clarification
     """
     if not is_ambiguous_input(user_input):
         return user_input
-    
+
     # Extract the clarification request from the NEED_MORE_CONTEXT message
     # The format is: "NEED_MORE_CONTEXT: [clarification request]. Original: [original input]"
     parts = user_input.split("Original:")
     if len(parts) > 1:
         clarification_request = parts[0].replace("NEED_MORE_CONTEXT:", "").strip()
         original_input = parts[1].strip()
-        
+
         return f"I need more information to help you. {clarification_request}\n\nYour original request: '{original_input}'\n\nPlease provide more specific details and I'll be happy to help!"
     else:
         # Fallback if the format is unexpected
         return f"I need more information to help you. {user_input}\n\nPlease provide more specific details and I'll be happy to help!"
 
 
-def create_and_execute_tasks(user_requests: Dict[APICategory, List[str]]) -> None:
+def create_and_execute_tasks(
+    user_requests: Dict[APICategory, List[str]],
+) -> Dict[str, any]:
     """
     Create and execute tasks for each category and its associated requests.
-    
+
     Args:
         user_requests: Dictionary mapping APICategory to list of extracted request strings
     """
     tasks = []
-    
+    task_results = {
+        "successful": [],
+        "failed": [],
+        "skipped": [],
+        "total": 0,
+    }
     # Process each category and its associated requests
     for category, requests in user_requests.items():
         for request in requests:
             # Get category-specific instructions
-            instructions = _get_category_instructions(category, request)
-            
-            tasks.append(Task(
-                name=f"{category} Task",
-                instructions=instructions,
-                tools=[query_ableton, control_ableton, test_connection],
-            ))
+            instructions = _get_task_instructions(category, request)
+
+            tasks.append(
+                Task(
+                    name=f"{category} Task",
+                    instructions=instructions,
+                    tools=[query_ableton, control_ableton, test_connection],
+                )
+            )
 
     # Execute all tasks
     for task in tasks:
         task.run()
+        if task.is_complete:
+            task_results["successful"].append(task)
+        elif task.is_skipped:
+            task_results["skipped"].append(task)
+        elif task.is_failed:
+            task_results["failed"].append(task)
+        task_results["total"] += 1
+    return task_results
 
 
-def _get_category_instructions(category: APICategory, request: str) -> str:
+def _get_task_instructions(category: APICategory, request: str) -> str:
     """
     Get category-specific instructions for task execution.
-    
+
     Args:
         category: The API category for the task
         request: The user's request string
-        
+
     Returns:
         str: Category-specific instructions for the task
     """
     if category == APICategory.SONG.name:
         return _get_song_instructions(request)
     else:
-        raise NotImplementedError(f"Instructions for category {category} not yet implemented")
+        raise NotImplementedError(
+            f"Instructions for category {category} not yet implemented"
+        )
 
 
 def _get_song_instructions(request: str) -> str:
     """
     Get SONG API category-specific instructions.
-    
+
     Args:
         request: The user's request string
-        
+
     Returns:
         str: SONG-specific instructions for the task
     """
@@ -365,20 +403,26 @@ You are an Ableton Live SONG API specialist. Your task is to handle global trans
 
 User Request: {request}
 
-Your capabilities include:
-- Global transport control: play/stop/resume, tempo changes, metronome control
-- Song position and navigation: jump to specific positions, cue points
-- Session management: stop all clips, global undo/redo
-- Song metadata: tempo queries, playback status, song position
+Your comprehensive capabilities include:
+- Global transport: play/stop/continue, tempo/tap_tempo, metronome control
+- Song position/length: current position, song length, navigation (jump_by, cue points)
+- Time signature: numerator/denominator control
+- Loop control: loop on/off, loop start/length, groove amount
+- Recording: session_record, arrangement_overdub, record_mode, capture_midi
+- Navigation: undo/redo, back_to_arranger, jump operations
+- Track/scene management: create/delete/duplicate tracks/scenes, create_return_track
+- Quantization: clip_trigger_quantization, midi_recording_quantization
+- Punch/nudge: punch_in/out, nudge_down/up
+- Global controls: stop_all_clips, session_record_status
 
 Instructions:
 1. Analyze the user's request to determine the specific SONG API operation needed
-2. Use the appropriate OSC tools to execute the operation
+2. Use query_ableton() for status queries and control_ableton() for commands
 3. Provide clear feedback about what was accomplished
-4. If the request involves tempo changes, ensure you specify the exact BPM value
+4. For tempo changes, ensure you specify the exact BPM value
 5. For playback operations, confirm the current state before making changes
-6. Always verify the operation was successful and report the result
+6. For recording operations, verify session_record_status if relevant
+7. Always verify the operation was successful and report the result
 
 Focus on global session control rather than individual track or clip operations.
 """
-
