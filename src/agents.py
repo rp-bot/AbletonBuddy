@@ -7,8 +7,16 @@ from typing import List, Dict
 from enum import Enum
 from marvin import Task
 from marvin.engine.llm import AgentMessage
+
 # Import tools for future use
 from tools.osc.song_tools import query_ableton, control_ableton, test_connection
+from tools.osc.track_tools import (
+    query_track,
+    control_track,
+    query_track_devices,
+    query_track_clips,
+    stop_track_clips,
+)
 
 
 class APICategory(Enum):
@@ -47,7 +55,7 @@ def classify_user_input(
         "- APPLICATION: Control/query Live application itself (startup/errors, logs, Live version).\n"
         "- SONG: Global transport and session state (play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature, loop settings, recording/session_record/arrangement_overdub, undo/redo, navigation/jump, track/scene creation/deletion, groove/quantization, punch/nudge, stop_all_clips).\n"
         "- VIEW: UI selection and view state (selected track/scene/clip/device, navigating/selecting in UI).\n"
-        "- TRACK: Per-track operations (volume, pan, sends, mute/solo/arm, meters, devices on a track, track clip lists).\n"
+        "- TRACK: Per-track operations (arm/mute/solo, volume, panning, sends, stop_all_clips on track, name, color/color_index, routing channels/types, monitoring state, meters, fold_state for groups, has_audio/midi_input/output, fired/playing_slot_index, track devices/clips queries).\n"
         "- CLIP_SLOT: Operations on a slot that may or may not contain a clip (create/delete clip in slot, check slot state).\n"
         "- CLIP: Operations on an individual clip (launch/stop, looping, length, start time, notes, properties).\n"
         "- SCENE: Scene-level actions (create/duplicate/delete scenes, trigger scenes, scene indices/properties).\n"
@@ -56,7 +64,7 @@ def classify_user_input(
         "- If the request is about PLAY/STOP/tempo/metronome/loop/recording/navigation/undo/redo or overall session state: include SONG.\n"
         "- If it's about track/scene creation/deletion/duplication: include SONG (prefer SONG over TRACK for global track management).\n"
         "- If it's about UI selection/navigating what is selected: include VIEW (and also the target domain when relevant).\n"
-        "- If it's about a specific track's mix/arm/solo/devices: include TRACK (and DEVICE if about device params).\n"
+        "- If it's about a specific track's mix controls (arm/mute/solo/volume/pan/sends), routing, meters, properties (name/color), or stopping clips on a track: include TRACK.\n"
         "- If it's about creating/deleting or checking a slot: include CLIP_SLOT.\n"
         "- If it's about editing/launching a concrete clip's content/loop/notes: include CLIP.\n"
         "- If it's about triggering/managing scenes: include SCENE (and SONG if global transport is implicated).\n"
@@ -133,9 +141,16 @@ def _instruction_for_category(category: APICategory) -> str:
         APICategory.TRACK.name: (
             "\nTRACK API category\n"
             "Category focus:\n"
-            "- Per-track mix/control: arm/mute/solo, volume, pan, sends, stop all clips on a track.\n"
-            "- Track properties: names, meters, routing, devices on a track, clip lists.\n"
-            "Examples: 'mute track 2', 'arm bass track', 'set track 1 pan left', 'show all tracks', 'what tracks are armed', 'show track 1 volume'."
+            "- Per-track mix controls: arm/mute/solo, volume, panning, sends.\n"
+            "- Track properties: name, color/color_index, meters (output_meter_left/right/level).\n"
+            "- Routing: available and current input/output routing channels/types, monitoring state.\n"
+            "- Track state: can_be_armed, fired_slot_index, playing_slot_index, is_visible.\n"
+            "- Audio/MIDI capabilities: has_audio_input/output, has_midi_input/output.\n"
+            "- Group operations: fold_state, is_foldable, is_grouped.\n"
+            "- Device queries on track: num_devices, devices/name, devices/type, devices/class_name.\n"
+            "- Clip queries on track: clips/name/length/color (session), arrangement_clips/name/length/start_time.\n"
+            "- Clip control on track: stop_all_clips.\n"
+            "Examples: 'mute track 2', 'set track 1 volume to -6 dB', 'arm the bass track', 'set track 3 pan left', 'show track 1 devices', 'get all clip names on track 0', 'stop all clips on track 2', 'what is track 1 output level', 'set send A on track 2 to 0.5', 'show track routing options'."
         ),
         APICategory.CLIP_SLOT.name: (
             "\nCLIP_SLOT API category\n"
@@ -254,6 +269,13 @@ def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> st
         "- 'arm track' → needs track identifier\n"
         "- 'set volume' → needs volume value and track identifier\n"
         "- 'set pan' → needs pan value and track identifier\n"
+        "- 'set send' → needs send_id, send value, and track identifier\n"
+        "- 'show track meters' → needs track identifier\n"
+        "- 'get track devices' → needs track identifier\n"
+        "- 'show track clips' → needs track identifier\n"
+        "- 'stop clips on track' → needs track identifier\n"
+        "- 'set track routing' → needs routing type/channel and track identifier\n"
+        "- 'fold track' → needs track identifier (for group tracks)\n"
         "- 'create clip' → needs track and slot information\n"
         "- 'launch scene' → needs scene identifier\n"
         "- 'set reverb' → needs reverb value and target device/track\n"
@@ -325,6 +347,7 @@ def handle_ambiguous_input(user_input: str) -> str:
         # Fallback if the format is unexpected
         return f"I need more information to help you. {user_input}\n\nPlease provide more specific details and I'll be happy to help!"
 
+
 def create_and_execute_tasks(
     user_requests: Dict[APICategory, List[str]],
     thread: marvin.Thread | None = None,
@@ -335,28 +358,62 @@ def create_and_execute_tasks(
     Args:
         user_requests: Dictionary mapping APICategory to list of extracted request strings
         thread: Optional marvin Thread for context
-        
+
     Returns:
         List[Task]: List of created tasks
     """
     tasks = []
-    
+
     # Process each category and its associated requests
     for category, requests in user_requests.items():
         for request in requests:
             # Get category-specific instructions
             instructions = _get_task_instructions(category, request)
 
+            # Get category-specific tools
+            tools = _get_category_tools(category)
+
             tasks.append(
                 Task(
                     name=f"{category} Task",
                     instructions=instructions,
-                    tools=[query_ableton, control_ableton, test_connection],
+                    tools=tools,
                 )
             )
 
-            thread.add_messages([AgentMessage(content=f"Task Created: \n-{tasks[-1].id}\n-{tasks[-1].name}\n-{tasks[-1].result}\n-{tasks[-1].state}")])
+            thread.add_messages(
+                [
+                    AgentMessage(
+                        content=f"Task Created: \n-{tasks[-1].id}\n-{tasks[-1].name}\n-request: {request}\n-{tasks[-1].state.value}"
+                    )
+                ]
+            )
     return tasks
+
+
+def _get_category_tools(category: APICategory) -> list:
+    """
+    Get the appropriate tools for a given API category.
+
+    Args:
+        category: The API category for the task
+
+    Returns:
+        list: List of tools appropriate for the category
+    """
+    if category == APICategory.SONG.name:
+        return [query_ableton, control_ableton, test_connection]
+    elif category == APICategory.TRACK.name:
+        return [
+            query_track,
+            control_track,
+            query_track_devices,
+            query_track_clips,
+            stop_track_clips,
+        ]
+    else:
+        # Default to empty list for unimplemented categories
+        return []
 
 
 def _get_task_instructions(category: APICategory, request: str) -> str:
@@ -372,6 +429,8 @@ def _get_task_instructions(category: APICategory, request: str) -> str:
     """
     if category == APICategory.SONG.name:
         return _get_song_instructions(request)
+    elif category == APICategory.TRACK.name:
+        return _get_track_instructions(request)
     else:
         raise NotImplementedError(
             f"Instructions for category {category} not yet implemented"
@@ -418,18 +477,68 @@ Focus on global session control rather than individual track or clip operations.
 """
 
 
+def _get_track_instructions(request: str) -> str:
+    """
+    Get TRACK API category-specific instructions.
+
+    Args:
+        request: The user's request string
+
+    Returns:
+        str: TRACK-specific instructions for the task
+    """
+    return f"""
+You are an Ableton Live TRACK API specialist. Your task is to handle per-track control and inspection operations.
+
+User Request: {request}
+
+Your comprehensive capabilities include:
+- Mix controls: arm/mute/solo, volume, panning, sends (per send level control)
+- Track properties: name, color/color_index
+- Routing: available_input/output_routing_channels/types, input/output_routing_channel/type, current_monitoring_state
+- Track state: can_be_armed, fired_slot_index, playing_slot_index, is_visible
+- Audio/MIDI capabilities: has_audio_input/output, has_midi_input/output
+- Metering: output_meter_left/right/level (real-time audio levels)
+- Group operations: fold_state, is_foldable, is_grouped
+- Device queries: num_devices, devices/name, devices/type, devices/class_name
+- Clip queries (bulk): clips/name/length/color (session view), arrangement_clips/name/length/start_time
+- Clip control: stop_all_clips on a specific track
+
+Available tools:
+- query_track(track_id, query_type, [additional_params]) - Query track properties
+- control_track(track_id, command_type, value, [additional_params]) - Set track properties
+- query_track_devices(track_id, query_type) - Query devices on a track
+- query_track_clips(track_id, query_type) - Query all clips on a track
+- stop_track_clips(track_id) - Stop all clips on a track
+
+Instructions:
+1. Track IDs are 0-based (first track = 0)
+2. For queries, use query_track() with appropriate query_type (arm, volume, mute, solo, panning, send, name, color, etc.)
+3. For controls, use control_track() with command_type (set_arm, set_volume, set_mute, set_solo, set_panning, set_send, etc.)
+4. For send operations, provide send_id in additional_params (e.g., send_id=0 for Send A)
+5. Volume is typically 0.0-1.0, panning is -1.0 (left) to 1.0 (right)
+6. Meters return values in dB, typically negative values (0 dB = maximum)
+7. Use query_track_devices() to list devices, then DEVICE API for device parameters
+8. Use query_track_clips() for bulk clip information (all clips on a track at once)
+9. Always verify operations were successful and provide clear feedback
+10. If track number is ambiguous, ask for clarification
+
+Focus on per-track operations. For global track management (create/delete/duplicate tracks), use SONG API instead.
+"""
+
+
 def summarize_thread(thread: marvin.Thread) -> str:
     """
     Summarize the results of a thread using marvin.summarize.
-    
+
     Args:
         thread: The marvin Thread to summarize
-        
+
     Returns:
         str: A summary of the thread's content and results
     """
     thread_messages = thread.get_messages()
-    
+
     instructions = (
         "Create a concise, easy-to-read summary of this Ableton Live session. "
         "Write in first person from the agent's perspective using 'I' statements. "
@@ -444,6 +553,6 @@ def summarize_thread(thread: marvin.Thread) -> str:
         "Keep it brief and use simple, clear language. "
         "Avoid technical jargon and focus on what the user needs to know."
     )
-    
+
     summary = marvin.summarize(thread_messages, instructions=instructions)
     return summary

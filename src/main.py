@@ -76,16 +76,15 @@ def main():
                 # Execute all tasks
                 for task in tasks:
                     task.run()
-                    if task.is_complete:
-                        
+                    if task.is_complete:    
                         task_results["successful"].append(task)
-                        thread.add_messages([AgentMessage(content=f"Task Successful: {task.id}\n{task.name}\n{task.result}\n{task.state}")])
+                        thread.add_messages([AgentMessage(content=f"Task Successful:\n-{task.id}\n-{task.name}\n-{task.result}\n-{task.tools}\n-{task.state.value}")])
                     elif task.is_skipped:
                         task_results["skipped"].append(task)
-                        thread.add_messages([AgentMessage(content=f"Task Skipped: {task.id}\n{task.name}\n{task.result}\n{task.state}")])
+                        thread.add_messages([AgentMessage(content=f"Task Skipped:\n-{task.id}\n-{task.name}\n-{task.result}\n-{task.tools}\n-{task.state.value}")])
                     elif task.is_failed:
                         task_results["failed"].append(task)
-                        thread.add_messages([AgentMessage(content=f"Task Failed: {task.id}\n{task.name}\n{task.result}\n{task.state}")])
+                        thread.add_messages([AgentMessage(content=f"Task Failed:\n-{task.id}\n-{task.name}\n-{task.result}\n-{task.tools}\n-{task.state.value}")])
                     task_results["total"] += 1
                 # Add the task results to the thread    
                 summarized_results = summarize_thread(thread)
