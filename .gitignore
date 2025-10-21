@@ -16,3 +16,9 @@ wheels/
 .vscode
 
 data/
+
+# Database and conversation files
+ableton_buddy.db
+ableton_buddy.db-shm
+ableton_buddy.db-wal
+thread_messages.json
