@@ -6,7 +6,7 @@ import marvin
 from typing import List, Dict
 from enum import Enum
 from marvin import Task
-
+from marvin.engine.llm import AgentMessage
 # Import tools for future use
 from tools.osc.song_tools import query_ableton, control_ableton, test_connection
 
@@ -325,23 +325,22 @@ def handle_ambiguous_input(user_input: str) -> str:
         # Fallback if the format is unexpected
         return f"I need more information to help you. {user_input}\n\nPlease provide more specific details and I'll be happy to help!"
 
-
 def create_and_execute_tasks(
     user_requests: Dict[APICategory, List[str]],
-) -> Dict[str, any]:
+    thread: marvin.Thread | None = None,
+) -> List[Task]:
     """
     Create and execute tasks for each category and its associated requests.
 
     Args:
         user_requests: Dictionary mapping APICategory to list of extracted request strings
+        thread: Optional marvin Thread for context
+        
+    Returns:
+        List[Task]: List of created tasks
     """
     tasks = []
-    task_results = {
-        "successful": [],
-        "failed": [],
-        "skipped": [],
-        "total": 0,
-    }
+    
     # Process each category and its associated requests
     for category, requests in user_requests.items():
         for request in requests:
@@ -356,17 +355,8 @@ def create_and_execute_tasks(
                 )
             )
 
-    # Execute all tasks
-    for task in tasks:
-        task.run()
-        if task.is_complete:
-            task_results["successful"].append(task)
-        elif task.is_skipped:
-            task_results["skipped"].append(task)
-        elif task.is_failed:
-            task_results["failed"].append(task)
-        task_results["total"] += 1
-    return task_results
+            thread.add_messages([AgentMessage(content=f"Task Created: \n-{tasks[-1].id}\n-{tasks[-1].name}\n-{tasks[-1].result}\n-{tasks[-1].state}")])
+    return tasks
 
 
 def _get_task_instructions(category: APICategory, request: str) -> str:
@@ -426,3 +416,34 @@ Instructions:
 
 Focus on global session control rather than individual track or clip operations.
 """
+
+
+def summarize_thread(thread: marvin.Thread) -> str:
+    """
+    Summarize the results of a thread using marvin.summarize.
+    
+    Args:
+        thread: The marvin Thread to summarize
+        
+    Returns:
+        str: A summary of the thread's content and results
+    """
+    thread_messages = thread.get_messages()
+    
+    instructions = (
+        "Create a concise, easy-to-read summary of this Ableton Live session. "
+        "Write in first person from the agent's perspective using 'I' statements. "
+        "Format the summary with bullet points and end with 'Do you need me to do anything else?'\n\n"
+        "Structure:\n"
+        "• What the user asked for\n"
+        "• What I accomplished\n"
+        "• Key results or changes I made\n"
+        "• Whether the request was completed successfully\n"
+        "• End with: 'Do you need me to do anything else?'\n\n"
+        "Use phrases like 'I did this' or 'I accomplished that'. "
+        "Keep it brief and use simple, clear language. "
+        "Avoid technical jargon and focus on what the user needs to know."
+    )
+    
+    summary = marvin.summarize(thread_messages, instructions=instructions)
+    return summary
