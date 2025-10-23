@@ -102,23 +102,15 @@ def format_message_for_display(message) -> Dict[str, Any]:
     }
 
 
-def filter_messages_for_display(messages: List) -> List[Dict[str, Any]]:
+def filter_messages_for_display(
+    messages: List, include_details: bool = False
+) -> List[Dict[str, Any]]:
     """
-    Filter thread messages to show only user-facing content.
-
-    Keeps:
-    - User messages
-    - Summarization Agent responses (final responses)
-
-    Filters out:
-    - Disambiguation Agent messages
-    - Classification Agent messages
-    - Extraction Agent messages
-    - Task Created/Successful/Failed messages
-    - Other internal agent messages
+    Filter thread messages to show user-facing content with optional details.
 
     Args:
         messages: List of Marvin message objects
+        include_details: If True, includes more detailed agent messages
 
     Returns:
         List[dict]: Filtered and formatted messages
@@ -126,15 +118,108 @@ def filter_messages_for_display(messages: List) -> List[Dict[str, Any]]:
     filtered = []
 
     for message in messages:
-        # Keep user messages
+        # Always keep user messages
         if is_user_message(message):
             filtered.append(format_message_for_display(message))
         # Keep summarization messages (assistant responses)
         elif is_summarization_message(message):
             filtered.append(format_message_for_display(message))
-        # Filter out everything else (internal agent messages)
+        # Optionally include detailed agent messages
+        elif include_details:
+            content = extract_message_content(message)
+            # Include task results and important agent messages
+            if any(
+                keyword in content
+                for keyword in [
+                    "Task Successful",
+                    "Task Failed",
+                    "Task Skipped",
+                    "Disambiguation Agent",
+                    "Classification Agent",
+                    "Extraction Agent",
+                ]
+            ):
+                formatted = format_message_for_display(message)
+                formatted["role"] = "system"  # Mark as system message
+                filtered.append(formatted)
 
     return filtered
+
+
+def get_detailed_messages(messages: List) -> List[Dict[str, Any]]:
+    """
+    Get all messages with full details preserved.
+
+    Args:
+        messages: List of Marvin message objects
+
+    Returns:
+        List[dict]: All messages with full details
+    """
+    detailed = []
+
+    for message in messages:
+        content = extract_message_content(message)
+
+        # Determine role based on message type
+        if is_user_message(message):
+            role = "user"
+        elif is_summarization_message(message):
+            role = "assistant"
+        elif "Disambiguation Agent" in content:
+            role = "disambiguation"
+        elif "Classification Agent" in content:
+            role = "classification"
+        elif "Extraction Agent" in content:
+            role = "extraction"
+        elif "Task Created" in content:
+            role = "task_created"
+        elif "Task Successful" in content:
+            role = "task_success"
+        elif "Task Failed" in content:
+            role = "task_failed"
+        elif "Task Skipped" in content:
+            role = "task_skipped"
+        else:
+            role = "system"
+
+        # Extract additional metadata
+        metadata = {}
+        if hasattr(message, "message") and hasattr(message.message, "usage"):
+            metadata["usage"] = (
+                message.message.usage.__dict__
+                if hasattr(message.message.usage, "__dict__")
+                else {}
+            )
+
+        if hasattr(message, "message") and hasattr(message.message, "timestamp"):
+            metadata["message_timestamp"] = (
+                message.message.timestamp.isoformat()
+                if hasattr(message.message.timestamp, "isoformat")
+                else str(message.message.timestamp)
+            )
+
+        detailed.append(
+            {
+                "id": str(message.id) if hasattr(message, "id") else None,
+                "role": role,
+                "content": content,
+                "timestamp": message.created_at.isoformat()
+                if hasattr(message, "created_at")
+                else None,
+                "metadata": metadata,
+                "raw_message": {
+                    "type": type(message.message).__name__
+                    if hasattr(message, "message")
+                    else None,
+                    "parts_count": len(message.message.parts)
+                    if hasattr(message, "message") and hasattr(message.message, "parts")
+                    else 0,
+                },
+            }
+        )
+
+    return detailed
 
 
 def format_message_for_cli(message_dict: Dict[str, Any]) -> str:

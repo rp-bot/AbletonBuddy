@@ -10,6 +10,9 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 if __name__ == "__main__":
+    # Import config first to set up environment variables and database
+    import config  # noqa: F401
+
     import uvicorn
     from api import app
 
