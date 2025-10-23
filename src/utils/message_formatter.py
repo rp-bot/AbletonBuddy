@@ -27,12 +27,37 @@ def extract_message_content(message) -> str:
         if hasattr(msg_obj, "parts"):
             for part in msg_obj.parts:
                 if hasattr(part, "content"):
-                    content += part.content + " "
+                    # Handle case where content is a list
+                    if isinstance(part.content, list):
+                        for item in part.content:
+                            if isinstance(item, str):
+                                content += item + " "
+                            else:
+                                content += str(item) + " "
+                    # Handle case where content is a string
+                    elif isinstance(part.content, str):
+                        content += part.content + " "
+                    else:
+                        content += str(part.content) + " "
         # Try direct content attribute
         elif hasattr(msg_obj, "content"):
-            content = msg_obj.content
+            if isinstance(msg_obj.content, list):
+                for item in msg_obj.content:
+                    if isinstance(item, str):
+                        content += item + " "
+                    else:
+                        content += str(item) + " "
+            else:
+                content = str(msg_obj.content)
     elif hasattr(message, "content"):
-        content = message.content
+        if isinstance(message.content, list):
+            for item in message.content:
+                if isinstance(item, str):
+                    content += item + " "
+                else:
+                    content += str(item) + " "
+        else:
+            content = str(message.content)
 
     return content.strip()
 
@@ -49,7 +74,30 @@ def is_user_message(message) -> bool:
     """
     if hasattr(message, "message"):
         message_type = type(message.message).__name__
-        return message_type in ["UserMessage", "ModelRequest"]
+
+        # Only UserMessage is definitely a user message
+        if message_type == "UserMessage":
+            return True
+
+        # For ModelRequest, check the content to determine if it's actually a user message
+        if message_type == "ModelRequest":
+            content = extract_message_content(message)
+            # If it starts with task tags or contains agent keywords, it's not a user message
+            if (
+                content.startswith("<task>")
+                or content.startswith("Summarization Agent:")
+                or content.startswith("Disambiguation Agent:")
+                or content.startswith("Classification Agent:")
+                or content.startswith("Extraction Agent:")
+                or content.startswith("Task Created:")
+                or content.startswith("Task Successful:")
+                or content.startswith("Task Failed:")
+                or content.startswith("Task Skipped:")
+            ):
+                return False
+            # Otherwise, it's likely a user message
+            return True
+
     return False
 
 
@@ -64,7 +112,11 @@ def is_summarization_message(message) -> bool:
         bool: True if message is a summarization
     """
     content = extract_message_content(message)
-    return content.startswith("Summarization Agent:")
+    return (
+        content.startswith("Summarization Agent:")
+        or content.startswith("<task>")
+        or "Summarize Task" in content
+    )
 
 
 def format_message_for_display(message) -> Dict[str, Any]:

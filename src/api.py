@@ -185,6 +185,41 @@ async def create_thread():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/threads/{thread_id}")
+async def delete_thread(thread_id: str):
+    """
+    Delete a conversation thread and all its messages.
+
+    Args:
+        thread_id: UUID of the thread to delete
+
+    Returns:
+        Success message
+    """
+    try:
+        # Check if thread exists
+        thread = marvin.Thread(id=thread_id)
+        messages = thread.get_messages()
+
+        # Delete the thread (this will cascade delete all messages)
+        # Note: Marvin doesn't have a direct delete method, so we'll use the database
+        async with get_async_session() as session:
+            # Delete all messages for this thread
+            from sqlalchemy import delete
+
+            await session.execute(
+                delete(DBMessage).where(DBMessage.thread_id == thread_id)
+            )
+
+            # Delete the thread itself
+            await session.execute(delete(DBThread).where(DBThread.id == thread_id))
+            await session.commit()
+
+        return {"message": f"Thread {thread_id} deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/threads/{thread_id}", response_model=ThreadDetail)
 async def get_thread(thread_id: str, include_details: bool = False):
     """
