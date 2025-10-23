@@ -86,7 +86,7 @@ def classify_user_input(
         labels=label_names,
         multi_label=True,
         instructions=guidance,
-        thread=thread,
+        # thread=thread,
     )
 
     # Convert the result back to the enum
@@ -305,7 +305,7 @@ def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> st
     return marvin.run(
         instructions=instructions,
         result_type=str,
-        thread=thread,
+        # thread=thread,
     )
 
 
@@ -381,13 +381,13 @@ def create_and_execute_tasks(
                 )
             )
 
-            thread.add_messages(
-                [
-                    AgentMessage(
-                        content=f"Task Created: \n-{tasks[-1].id}\n-{tasks[-1].name}\n-request: {request}\n-{tasks[-1].state.value}"
-                    )
-                ]
-            )
+            # thread.add_messages(
+            #     [
+            #         AgentMessage(
+            #             content=f"Task Created: \n-{tasks[-1].id}\n-{tasks[-1].name}\n-request: {request}\n-{tasks[-1].state.value}"
+            #         )
+            #     ]
+            # )
     return tasks
 
 

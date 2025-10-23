@@ -1,0 +1,73 @@
+/**
+ * Message filtering utilities for chat display
+ */
+
+/**
+ * Filter messages to show only user and assistant messages
+ * @param {Array} messages - Array of message objects from API
+ * @param {boolean} showDetails - Whether to show intermediate messages
+ * @returns {Array} Filtered messages
+ */
+export function filterMessagesForDisplay(messages, showDetails = false) {
+  if (!messages || !Array.isArray(messages)) {
+    return [];
+  }
+
+  if (showDetails) {
+    // Show all messages
+    return messages.map(transformMessage);
+  }
+
+  // Filter to show only user and assistant messages
+  return messages.filter((message) => message.role === "user" || message.role === "assistant").map(transformMessage);
+}
+
+/**
+ * Transform API message format to ChatScope format
+ * @param {Object} message - Message from API
+ * @returns {Object} Transformed message for ChatScope
+ */
+function transformMessage(message) {
+  return {
+    id: message.id,
+    type: message.role === "user" ? "text" : "text",
+    direction: message.role === "user" ? "outgoing" : "incoming",
+    position: "normal",
+    text: message.content,
+    timestamp: new Date(message.timestamp),
+    sender: message.role === "user" ? "You" : "Ableton Buddy",
+    // Store original message for detailed view
+    originalMessage: message,
+  };
+}
+
+/**
+ * Get message count for a thread
+ * @param {Array} messages - Array of message objects
+ * @returns {number} Count of user and assistant messages
+ */
+export function getDisplayMessageCount(messages) {
+  if (!messages || !Array.isArray(messages)) {
+    return 0;
+  }
+
+  return messages.filter((message) => message.role === "user" || message.role === "assistant").length;
+}
+
+/**
+ * Get thread preview text from first user message
+ * @param {Array} messages - Array of message objects
+ * @returns {string} Preview text
+ */
+export function getThreadPreview(messages) {
+  if (!messages || !Array.isArray(messages)) {
+    return "No messages";
+  }
+
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  if (firstUserMessage) {
+    return firstUserMessage.content.length > 50 ? firstUserMessage.content.substring(0, 50) + "..." : firstUserMessage.content;
+  }
+
+  return "No user messages";
+}

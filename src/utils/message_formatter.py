@@ -119,6 +119,20 @@ def is_summarization_message(message) -> bool:
     )
 
 
+def is_status_message(message) -> bool:
+    """
+    Check if a message is a status update message.
+
+    Args:
+        message: A Marvin message object
+
+    Returns:
+        bool: True if message is a status update
+    """
+    content = extract_message_content(message)
+    return content.startswith("Status:")
+
+
 def format_message_for_display(message) -> Dict[str, Any]:
     """
     Format a single message for display.
@@ -138,6 +152,10 @@ def format_message_for_display(message) -> Dict[str, Any]:
         role = "assistant"
         # Remove "Summarization Agent:" prefix
         content = content.replace("Summarization Agent:", "").strip()
+    elif is_status_message(message):
+        role = "status"
+        # Remove "Status:" prefix
+        content = content.replace("Status:", "").strip()
     else:
         role = "system"
 
@@ -179,7 +197,7 @@ def filter_messages_for_display(
         # Optionally include detailed agent messages
         elif include_details:
             content = extract_message_content(message)
-            # Include task results and important agent messages
+            # Include task results, important agent messages, and status messages
             if any(
                 keyword in content
                 for keyword in [
@@ -190,9 +208,11 @@ def filter_messages_for_display(
                     "Classification Agent",
                     "Extraction Agent",
                 ]
-            ):
+            ) or is_status_message(message):
                 formatted = format_message_for_display(message)
-                formatted["role"] = "system"  # Mark as system message
+                # Keep the original role for status messages, mark others as system
+                if not is_status_message(message):
+                    formatted["role"] = "system"
                 filtered.append(formatted)
 
     return filtered
@@ -218,6 +238,8 @@ def get_detailed_messages(messages: List) -> List[Dict[str, Any]]:
             role = "user"
         elif is_summarization_message(message):
             role = "assistant"
+        elif is_status_message(message):
+            role = "status"
         elif "Disambiguation Agent" in content:
             role = "disambiguation"
         elif "Classification Agent" in content:
@@ -291,6 +313,8 @@ def format_message_for_cli(message_dict: Dict[str, Any]) -> str:
         return f"\n🎹 You: {content}"
     elif role == "assistant":
         return f"\n🎵 Assistant: {content}"
+    elif role == "status":
+        return f"\n📊 Status: {content}"
     else:
         return f"\n⚙️  System: {content}"
 

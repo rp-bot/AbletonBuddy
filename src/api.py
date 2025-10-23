@@ -12,7 +12,14 @@ from sse_starlette.sse import EventSourceResponse
 import marvin
 from marvin.engine.llm import UserMessage, AgentMessage
 from marvin.database import get_async_session, DBThread, DBMessage
-from sqlalchemy import select, func, desc
+from sqlalchemy import delete
+from database import (
+    register_thread,
+    get_tracked_threads,
+    update_thread_metadata,
+    delete_tracked_thread,
+    thread_exists,
+)
 
 # Import configuration to ensure database is set up
 import config  # noqa: F401
@@ -47,6 +54,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize custom database table on startup."""
+    from database import init_custom_db
+
+    await init_custom_db()
 
 
 # Pydantic models for request/response
@@ -109,59 +124,31 @@ async def list_threads():
         List of thread summaries with metadata
     """
     try:
-        async with get_async_session() as session:
-            # Query all threads ordered by creation date (newest first)
-            stmt = select(DBThread).order_by(desc(DBThread.created_at))
-            result = await session.execute(stmt)
-            threads = result.scalars().all()
+        # Get threads from our custom tracking table
+        tracked_threads = await get_tracked_threads()
 
-            thread_summaries = []
-            for thread in threads:
-                # Count messages for this thread
-                message_count_stmt = select(func.count(DBMessage.id)).where(
-                    DBMessage.thread_id == thread.id
+        thread_summaries = []
+        for thread in tracked_threads:
+            # Use first_message_preview as summary, or fallback to message count
+            summary = (
+                thread.first_message_preview
+                or f"Thread with {thread.message_count} messages"
+            )
+
+            # Truncate summary if too long
+            if len(summary) > 100:
+                summary = summary[:100] + "..."
+
+            thread_summaries.append(
+                ThreadSummary(
+                    thread_id=thread.thread_id,
+                    created_at=thread.created_at.isoformat(),
+                    message_count=thread.message_count,
+                    summary=summary,
                 )
-                message_count_result = await session.execute(message_count_stmt)
-                message_count = message_count_result.scalar() or 0
+            )
 
-                # Get the first user message for summary
-                first_message_stmt = (
-                    select(DBMessage)
-                    .where(DBMessage.thread_id == thread.id)
-                    .order_by(DBMessage.created_at)
-                    .limit(1)
-                )
-                first_message_result = await session.execute(first_message_stmt)
-                first_message = first_message_result.scalar_one_or_none()
-
-                # Generate summary from first message or use default
-                if first_message:
-                    try:
-                        # Try to extract content from the serialized message
-                        message_data = first_message.message
-                        if isinstance(message_data, dict) and "content" in message_data:
-                            summary = (
-                                message_data["content"][:100] + "..."
-                                if len(message_data["content"]) > 100
-                                else message_data["content"]
-                            )
-                        else:
-                            summary = f"Thread with {message_count} messages"
-                    except Exception:
-                        summary = f"Thread with {message_count} messages"
-                else:
-                    summary = f"Thread with {message_count} messages"
-
-                thread_summaries.append(
-                    ThreadSummary(
-                        thread_id=thread.id,
-                        created_at=thread.created_at.isoformat(),
-                        message_count=message_count,
-                        summary=summary,
-                    )
-                )
-
-            return thread_summaries
+        return thread_summaries
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -177,6 +164,10 @@ async def create_thread():
     """
     try:
         thread = marvin.Thread()
+
+        # Register the thread in our custom tracking table
+        await register_thread(thread.id)
+
         return {
             "thread_id": thread.id,
             "created_at": datetime.now().isoformat(),
@@ -197,16 +188,18 @@ async def delete_thread(thread_id: str):
         Success message
     """
     try:
-        # Check if thread exists
+        # Check if thread exists in our tracking table
+        if not await thread_exists(thread_id):
+            raise HTTPException(status_code=404, detail="Thread not found")
+
+        # Check if thread exists in Marvin
         thread = marvin.Thread(id=thread_id)
-        messages = thread.get_messages()
+        thread.get_messages()  # Verify thread exists
 
         # Delete the thread (this will cascade delete all messages)
         # Note: Marvin doesn't have a direct delete method, so we'll use the database
         async with get_async_session() as session:
             # Delete all messages for this thread
-            from sqlalchemy import delete
-
             await session.execute(
                 delete(DBMessage).where(DBMessage.thread_id == thread_id)
             )
@@ -215,7 +208,12 @@ async def delete_thread(thread_id: str):
             await session.execute(delete(DBThread).where(DBThread.id == thread_id))
             await session.commit()
 
+        # Remove from our custom tracking table
+        await delete_tracked_thread(thread_id)
+
         return {"message": f"Thread {thread_id} deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -233,6 +231,10 @@ async def get_thread(thread_id: str, include_details: bool = False):
         Thread details with formatted messages
     """
     try:
+        # Check if thread exists in our tracking table
+        if not await thread_exists(thread_id):
+            raise HTTPException(status_code=404, detail="Thread not found")
+
         thread = marvin.Thread(id=thread_id)
         messages = thread.get_messages()
 
@@ -248,6 +250,8 @@ async def get_thread(thread_id: str, include_details: bool = False):
             else datetime.now().isoformat(),
             "messages": filtered_messages,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -264,6 +268,10 @@ async def get_thread_detailed(thread_id: str):
         Thread details with all messages and metadata
     """
     try:
+        # Check if thread exists in our tracking table
+        if not await thread_exists(thread_id):
+            raise HTTPException(status_code=404, detail="Thread not found")
+
         thread = marvin.Thread(id=thread_id)
         messages = thread.get_messages()
 
@@ -277,6 +285,8 @@ async def get_thread_detailed(thread_id: str):
             else datetime.now().isoformat(),
             "messages": detailed_messages,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -294,6 +304,10 @@ async def add_message(thread_id: str, message: MessageRequest):
         Assistant's response message
     """
     try:
+        # Check if thread exists in our tracking table
+        if not await thread_exists(thread_id):
+            raise HTTPException(status_code=404, detail="Thread not found")
+
         thread = marvin.Thread(id=thread_id)
         user_input = message.content
 
@@ -310,6 +324,9 @@ async def add_message(thread_id: str, message: MessageRequest):
         if is_ambiguous_input(disambiguated_input):
             clarification_message = handle_ambiguous_input(disambiguated_input)
             thread.add_messages([AgentMessage(content=clarification_message)])
+
+            # Update thread metadata with the clarification
+            await update_thread_metadata(thread_id, last_message=clarification_message)
 
             # Return clarification request
             return {
@@ -331,7 +348,7 @@ async def add_message(thread_id: str, message: MessageRequest):
         )
 
         # Create and execute tasks
-        tasks = create_and_execute_tasks(user_requests, thread)
+        tasks = create_and_execute_tasks(user_requests)
 
         for task in tasks:
             task.run()
@@ -366,6 +383,9 @@ async def add_message(thread_id: str, message: MessageRequest):
             [AgentMessage(content=f"Summarization Agent: {summarized_results}")]
         )
 
+        # Update thread metadata with the final response
+        await update_thread_metadata(thread_id, last_message=summarized_results)
+
         # Return the summarization as assistant response
         return {
             "id": str(thread.get_messages()[-1].id),
@@ -374,6 +394,8 @@ async def add_message(thread_id: str, message: MessageRequest):
             "timestamp": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -395,21 +417,31 @@ async def stream_message(thread_id: str, message: MessageRequest):
 
     async def event_generator():
         try:
+            # Check if thread exists in our tracking table
+            if not await thread_exists(thread_id):
+                yield {"event": "error", "data": "Thread not found"}
+                return
+
             thread = marvin.Thread(id=thread_id)
             user_input = message.content
 
             # Add user message
             thread.add_messages([UserMessage(content=user_input)])
             yield {"event": "status", "data": "Processing your request..."}
-
+            thread.add_messages(
+                [AgentMessage(content="Status: Processing your request...")]
+            )
             # Disambiguation
             yield {"event": "status", "data": "Understanding your command..."}
+            thread.add_messages(
+                [AgentMessage(content="Status: Understanding your command...")]
+            )
             disambiguated_input = remove_ambiguity(user_input)
             thread.add_messages(
                 [AgentMessage(content=f"Disambiguation Agent: {disambiguated_input}")]
             )
             yield {
-                "event": "status",
+                "event": "disambiguation",
                 "data": f"Disambiguated input: {disambiguated_input}",
             }
 
@@ -418,7 +450,12 @@ async def stream_message(thread_id: str, message: MessageRequest):
                 clarification_message = handle_ambiguous_input(disambiguated_input)
                 thread.add_messages([AgentMessage(content=clarification_message)])
 
-                yield {"event": "message", "data": clarification_message}
+                # Update thread metadata with the clarification
+                await update_thread_metadata(
+                    thread_id, last_message=clarification_message
+                )
+
+                yield {"event": "assistant", "data": clarification_message}
                 yield {"event": "done", "data": "Need clarification"}
                 return
             else:
@@ -426,29 +463,48 @@ async def stream_message(thread_id: str, message: MessageRequest):
 
             # Classification
             yield {"event": "status", "data": "Identifying operations..."}
+            thread.add_messages(
+                [AgentMessage(content="Status: Identifying operations...")]
+            )
             api_categories = classify_user_input(disambiguated_input)
             thread.add_messages(
                 [AgentMessage(content=f"Classification Agent: {api_categories}")]
             )
-            yield {"event": "status", "data": f"Classification: {api_categories}"}
+            yield {
+                "event": "classification",
+                "data": f"Classification: {api_categories}",
+            }
             # Extraction
+            yield {"event": "status", "data": "Extracting operations..."}
+            thread.add_messages(
+                [AgentMessage(content="Status: Extracting operations...")]
+            )
             user_requests = extract_user_request(disambiguated_input, api_categories)
             thread.add_messages(
                 [AgentMessage(content=f"Extraction Agent: {user_requests}")]
             )
-            yield {"event": "status", "data": f"Extraction: {user_requests}"}
+            yield {"event": "extraction", "data": f"Extraction: {user_requests}"}
             # Task creation
             yield {"event": "status", "data": "Creating tasks..."}
-            tasks = create_and_execute_tasks(user_requests, thread)
+            thread.add_messages([AgentMessage(content="Status: Creating tasks...")])
+            tasks = create_and_execute_tasks(user_requests)
             # Execute tasks
             yield {"event": "status", "data": f"Executing {len(tasks)} task(s)..."}
-
+            thread.add_messages(
+                [AgentMessage(content=f"Status: Executing {len(tasks)} task(s)...")]
+            )
             for i, task in enumerate(tasks, 1):
                 yield {
                     "event": "status",
                     "data": f"Running task {i}/{len(tasks)}: {task.name} {task.tools}",
                 }
-
+                thread.add_messages(
+                    [
+                        AgentMessage(
+                            content=f"Status: Running task {i}/{len(tasks)}: {task.name} {task.tools}..."
+                        )
+                    ]
+                )
                 task.run()
 
                 if task.is_complete:
@@ -460,7 +516,7 @@ async def stream_message(thread_id: str, message: MessageRequest):
                         ]
                     )
                     yield {
-                        "event": "status",
+                        "event": "task_success",
                         "data": f"Task Successful: {task.name} {task.result} {', '.join([tool.__name__ for tool in task.tools])}",
                     }
                 elif task.is_skipped:
@@ -472,7 +528,7 @@ async def stream_message(thread_id: str, message: MessageRequest):
                         ]
                     )
                     yield {
-                        "event": "status",
+                        "event": "task_skipped",
                         "data": f"Task Skipped: {task.name} {task.result} {', '.join([tool.__name__ for tool in task.tools])}",
                     }
                 elif task.is_failed:
@@ -484,18 +540,22 @@ async def stream_message(thread_id: str, message: MessageRequest):
                         ]
                     )
                     yield {
-                        "event": "status",
+                        "event": "task_failed",
                         "data": f"Task Failed: {task.name} {task.result} {', '.join([tool.__name__ for tool in task.tools])}",
                     }
             # Summarize
             yield {"event": "status", "data": "Preparing response..."}
+            thread.add_messages([AgentMessage(content="Status: Preparing response...")])
             summarized_results = summarize_thread(thread)
             thread.add_messages(
                 [AgentMessage(content=f"Summarization Agent: {summarized_results}")]
             )
 
             # Send final message
-            yield {"event": "message", "data": summarized_results}
+            yield {"event": "assistant", "data": summarized_results}
+
+            # Update thread metadata with the final response
+            await update_thread_metadata(thread_id, last_message=summarized_results)
 
             yield {"event": "done", "data": "Complete"}
 
