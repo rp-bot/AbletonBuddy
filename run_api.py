@@ -18,4 +18,4 @@ if __name__ == "__main__":
     print("📖 API docs available at: http://localhost:8000/docs")
     print("\nPress CTRL+C to stop the server\n")
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
