@@ -4,8 +4,8 @@ import { filterMessagesForDisplay } from "../../utils/messageFilter";
 /**
  * Message list component using ChatScope
  */
-export default function MessageList({ messages, showDetails }) {
-  const filteredMessages = filterMessagesForDisplay(messages, showDetails);
+export default function MessageList({ messages }) {
+  const filteredMessages = filterMessagesForDisplay(messages);
 
   return (
     <ChatScopeMessageList>

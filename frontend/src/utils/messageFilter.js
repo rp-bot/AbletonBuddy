@@ -5,17 +5,11 @@
 /**
  * Filter messages to show only user and assistant messages
  * @param {Array} messages - Array of message objects from API
- * @param {boolean} showDetails - Whether to show intermediate messages
  * @returns {Array} Filtered messages
  */
-export function filterMessagesForDisplay(messages, showDetails = false) {
+export function filterMessagesForDisplay(messages) {
   if (!messages || !Array.isArray(messages)) {
     return [];
-  }
-
-  if (showDetails) {
-    // Show all messages
-    return messages.map(transformMessage);
   }
 
   // Filter to show only user and assistant messages

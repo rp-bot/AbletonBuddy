@@ -8,7 +8,6 @@ import ChatContainer from "../Chat/ChatContainer";
  */
 export default function AppLayout() {
   const [currentThreadId, setCurrentThreadId] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,19 +47,12 @@ export default function AppLayout() {
         <div className="flex-1 overflow-hidden">
           <ThreadList onThreadSelect={handleThreadSelect} currentThreadId={currentThreadId} />
         </div>
-
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <label className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-            <input type="checkbox" checked={showDetails} onChange={(e) => setShowDetails(e.target.checked)} className="mr-2" />
-            Show detailed messages
-          </label>
-        </div>
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {currentThreadId ? (
-          <ChatContainer threadId={currentThreadId} showDetails={showDetails} />
+          <ChatContainer threadId={currentThreadId} />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">

@@ -1,42 +1,46 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MainContainer, ChatContainer as ChatScopeChatContainer } from "@chatscope/chat-ui-kit-react";
 import { getThreadDetailed } from "../../api/client";
 import { useStreamingChat } from "../../hooks/useStreamingChat";
+import { groupMessagesWithAgentSteps } from "../../utils/messageGrouper";
 import MessageList from "./MessageList";
 import InputArea from "./InputArea";
-import StatusIndicator from "./StatusIndicator";
+import AgentStepsDropdown from "./AgentStepsDropdown";
 
 /**
  * Main chat container component
  */
-export default function ChatContainer({ threadId, showDetails }) {
+export default function ChatContainer({ threadId }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { isStreaming, statusMessage, streamingEvents, sendMessage } = useStreamingChat(threadId, (newMessage) => {
-    setMessages((prev) => [...prev, newMessage]);
+  const { isStreaming, sendMessage } = useStreamingChat(threadId, (updateFn) => {
+    setMessages(updateFn);
   });
 
   useEffect(() => {
     if (threadId) {
       loadThreadMessages();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId]);
 
-  const loadThreadMessages = async () => {
+  const loadThreadMessages = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const threadData = await getThreadDetailed(threadId);
-      setMessages(threadData.messages || []);
+      // Group messages with agent steps for proper display
+      const groupedMessages = groupMessagesWithAgentSteps(threadData.messages || []);
+      setMessages(groupedMessages);
     } catch (err) {
       setError("Failed to load messages");
       console.error("Error loading thread:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [threadId]);
 
   const handleSendMessage = async (content) => {
     if (!threadId || !content.trim()) return;
@@ -48,10 +52,28 @@ export default function ChatContainer({ threadId, showDetails }) {
       content,
       timestamp: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, userMessage]);
 
-    // Send message and handle streaming
-    await sendMessage(content);
+    // Add placeholder assistant message for spatial consistency
+    const placeholderId = `temp-${Date.now()}`;
+    const placeholderAssistantMessage = {
+      id: placeholderId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date().toISOString(),
+      agentSteps: {
+        status: [],
+        disambiguation: null,
+        classification: null,
+        extraction: null,
+        tasks: [],
+      },
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, userMessage, placeholderAssistantMessage]);
+
+    // Send message and handle streaming with placeholder ID
+    await sendMessage(content, placeholderId);
   };
 
   if (loading) {
@@ -81,9 +103,6 @@ export default function ChatContainer({ threadId, showDetails }) {
   return (
     <div className="flex-1 flex flex-col h-full">
       <div className="flex-1 flex flex-col h-full">
-        {/* Status Indicator */}
-        <StatusIndicator statusMessage={statusMessage} isStreaming={isStreaming} streamingEvents={streamingEvents} />
-
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4">
           {messages.length === 0 ? (
@@ -97,14 +116,35 @@ export default function ChatContainer({ threadId, showDetails }) {
             <div className="space-y-4">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    }`}
-                  >
-                    <div className="text-sm font-medium mb-1">{message.role === "user" ? "You" : "Ableton Buddy"}</div>
-                    <div className="text-sm">{message.content}</div>
-                    <div className="text-xs opacity-70 mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>
+                  <div className={`max-w-xs lg:max-w-md ${message.role === "user" ? "" : "w-full"}`}>
+                    {/* Agent Steps Dropdown for assistant messages */}
+                    {message.role === "assistant" && (
+                      <AgentStepsDropdown
+                        agentSteps={message.agentSteps}
+                        isStreaming={message.isStreaming || (isStreaming && message === messages[messages.length - 1])}
+                      />
+                    )}
+
+                    {/* Message Content */}
+                    <div
+                      className={`px-4 py-2 rounded-lg ${
+                        message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                      }`}
+                    >
+                      <div className="text-sm font-medium mb-1">{message.role === "user" ? "You" : "Ableton Buddy"}</div>
+                      <div className="text-sm">
+                        {message.content ||
+                          (message.isStreaming ? (
+                            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
+                              <span>Thinking...</span>
+                            </div>
+                          ) : (
+                            ""
+                          ))}
+                      </div>
+                      {message.content && <div className="text-xs opacity-70 mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>}
+                    </div>
                   </div>
                 </div>
               ))}

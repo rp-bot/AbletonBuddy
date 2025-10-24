@@ -66,6 +66,7 @@ export async function streamMessage(threadId, content, onEvent) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let currentEventType = "";
 
   try {
     while (true) {
@@ -80,13 +81,28 @@ export async function streamMessage(threadId, content, onEvent) {
       buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            onEvent(data);
-          } catch (e) {
-            console.error("Failed to parse SSE data:", e);
+        if (line.startsWith("event: ")) {
+          // Store the event type for the next data line
+          currentEventType = line.slice(7).trim();
+        } else if (line.startsWith("data: ")) {
+          // Extract the data payload (plain string, not JSON)
+          const data = line.slice(6).trim();
+
+          // Combine event type and data into the expected format
+          if (currentEventType) {
+            const event = {
+              event: currentEventType,
+              data: data,
+            };
+            onEvent(event);
           }
+
+          // Reset for next event
+          currentEventType = "";
+        } else if (line.trim() === "") {
+          // Empty line indicates end of SSE message
+          // Reset state for next message
+          currentEventType = "";
         }
       }
     }
