@@ -48,15 +48,17 @@ export async function getThreadDetailed(threadId) {
  * @param {string} threadId - Thread ID
  * @param {string} content - Message content
  * @param {Function} onEvent - Callback for each SSE event
- * @returns {Promise<void>}
+ * @param {AbortSignal} signal - Abort signal for cancellation
+ * @returns {Promise<{abort: Function}>} Object with abort function
  */
-export async function streamMessage(threadId, content, onEvent) {
+export async function streamMessage(threadId, content, onEvent, signal) {
   const response = await fetch(`${API_BASE_URL}/threads/${threadId}/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ content }),
+    signal: signal,
   });
 
   if (!response.ok) {
@@ -109,6 +111,34 @@ export async function streamMessage(threadId, content, onEvent) {
   } finally {
     reader.releaseLock();
   }
+
+  // Return abort function that calls the backend cancellation endpoint
+  return {
+    abort: async () => {
+      try {
+        await fetch(`${API_BASE_URL}/threads/${threadId}/stream`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        console.warn("Failed to cancel stream on backend:", error);
+      }
+    },
+  };
+}
+
+/**
+ * Cancel an active stream for a thread
+ * @param {string} threadId - Thread ID
+ * @returns {Promise<Object>} Success message
+ */
+export async function cancelStream(threadId) {
+  const response = await fetch(`${API_BASE_URL}/threads/${threadId}/stream`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to cancel stream");
+  }
+  return response.json();
 }
 
 /**

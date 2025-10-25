@@ -15,7 +15,7 @@ export default function ChatContainer({ threadId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { isStreaming, sendMessage } = useStreamingChat(threadId, (updateFn) => {
+  const { isStreaming, sendMessage, cancelStream } = useStreamingChat(threadId, (updateFn) => {
     setMessages(updateFn);
   });
 
@@ -160,25 +160,31 @@ export default function ChatContainer({ threadId }) {
               placeholder="Type your message..."
               className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
               onKeyPress={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !isStreaming) {
                   handleSendMessage(e.target.value);
                   e.target.value = "";
                 }
               }}
-            />
-            <button
-              onClick={() => {
-                const input = document.querySelector("input");
-                if (input.value) {
-                  handleSendMessage(input.value);
-                  input.value = "";
-                }
-              }}
               disabled={isStreaming}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isStreaming ? "Sending..." : "Send"}
-            </button>
+            />
+            {isStreaming ? (
+              <button onClick={cancelStream} className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                Stop
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  const input = document.querySelector("input");
+                  if (input.value) {
+                    handleSendMessage(input.value);
+                    input.value = "";
+                  }
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Send
+              </button>
+            )}
           </div>
         </div>
       </div>

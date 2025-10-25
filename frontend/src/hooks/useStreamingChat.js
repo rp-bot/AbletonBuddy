@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { streamMessage } from "../api/client";
+import { useState, useCallback, useRef } from "react";
+import { streamMessage, cancelStream } from "../api/client";
 
 /**
  * Custom hook for managing streaming chat functionality
@@ -11,6 +11,8 @@ export function useStreamingChat(threadId, onMessageUpdate) {
   const [statusMessage, setStatusMessage] = useState("");
   const [streamingEvents, setStreamingEvents] = useState([]);
   const [accumulatedAgentSteps, setAccumulatedAgentSteps] = useState([]);
+  const abortControllerRef = useRef(null);
+  const streamAbortRef = useRef(null);
   // const [currentPlaceholderId, setCurrentPlaceholderId] = useState(null);
 
   /**
@@ -22,22 +24,41 @@ export function useStreamingChat(threadId, onMessageUpdate) {
     async (content, placeholderId) => {
       if (!threadId || !content.trim()) return;
 
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       setIsStreaming(true);
       setStatusMessage("Processing your request...");
       setStreamingEvents([]);
       setAccumulatedAgentSteps([]);
 
       try {
-        await streamMessage(threadId, content, (event) => {
-          handleStreamingEvent(event, placeholderId);
-        });
+        const streamResult = await streamMessage(
+          threadId,
+          content,
+          (event) => {
+            handleStreamingEvent(event, placeholderId);
+          },
+          abortController.signal,
+        );
+
+        // Store the abort function for external cancellation
+        streamAbortRef.current = streamResult.abort;
       } catch (error) {
-        console.error("Streaming error:", error);
-        setStatusMessage("Error: " + error.message);
+        if (error.name === "AbortError") {
+          console.log("Stream was cancelled");
+          setStatusMessage("Generation stopped by user");
+        } else {
+          console.error("Streaming error:", error);
+          setStatusMessage("Error: " + error.message);
+        }
       } finally {
         setIsStreaming(false);
         setStatusMessage("");
         setStreamingEvents([]);
+        abortControllerRef.current = null;
+        streamAbortRef.current = null;
         // Don't clear accumulated steps here - they're needed for the final message
         // setAccumulatedAgentSteps([]);
       }
@@ -152,6 +173,24 @@ export function useStreamingChat(threadId, onMessageUpdate) {
         }, 1000); // Small delay to ensure backend has finished saving
         break;
 
+      case "cancelled":
+        setStatusMessage(`Generation stopped by user`);
+        if (onMessageUpdate && placeholderId) {
+          onMessageUpdate((prevMessages) =>
+            prevMessages.map((msg) => {
+              if (msg.id === placeholderId) {
+                return {
+                  ...msg,
+                  content: "Generation stopped by user",
+                  isStreaming: false,
+                };
+              }
+              return msg;
+            }),
+          );
+        }
+        break;
+
       case "error":
         setStatusMessage(`Error: ${data}`);
         break;
@@ -258,6 +297,28 @@ export function useStreamingChat(threadId, onMessageUpdate) {
   };
 
   /**
+   * Cancel the current stream
+   */
+  const cancelCurrentStream = useCallback(async () => {
+    if (abortControllerRef.current) {
+      // Cancel the frontend request
+      abortControllerRef.current.abort();
+    }
+
+    if (streamAbortRef.current) {
+      // Cancel the backend processing
+      await streamAbortRef.current();
+    }
+
+    // Also call the backend directly as a fallback
+    try {
+      await cancelStream(threadId);
+    } catch (error) {
+      console.warn("Failed to cancel stream:", error);
+    }
+  }, [threadId]);
+
+  /**
    * Clear current streaming status
    */
   const clearStatus = useCallback(() => {
@@ -289,6 +350,7 @@ export function useStreamingChat(threadId, onMessageUpdate) {
     statusMessage,
     streamingEvents,
     sendMessage,
+    cancelStream: cancelCurrentStream,
     clearStatus,
   };
 }
