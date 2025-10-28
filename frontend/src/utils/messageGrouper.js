@@ -41,10 +41,15 @@ export function groupMessagesWithAgentSteps(messages) {
     } else if (role === "assistant") {
       // This is the final summarization message - attach current agent steps
       const parsedSteps = parseAgentSteps(currentAgentSteps);
+
+      // Clean the content by removing "Summarization Agent:" prefix (like backend does)
+      const cleanContent = message.content.replace("Summarization Agent:", "").trim();
+
       // console.log("Assistant message - currentAgentSteps:", currentAgentSteps);
       // console.log("Assistant message - parsedSteps:", parsedSteps);
       groupedMessages.push({
         ...message,
+        content: cleanContent,
         agentSteps: parsedSteps,
       });
       // Clear agent steps for next conversation turn
@@ -197,10 +202,15 @@ export function getAgentStepsSummary(agentSteps) {
 /**
  * Check if agent steps are currently being processed (for streaming state)
  * @param {Object} agentSteps - Parsed agent steps object
+ * @param {string} messageContent - The message content to check for cancellation
  * @returns {boolean} True if still processing
  */
-export function isAgentStepsProcessing(agentSteps) {
+export function isAgentStepsProcessing(agentSteps, messageContent = "") {
   if (!agentSteps) return true;
+
+  // If message is cancelled, it's not processing
+  const isCancelled = messageContent === "Generation stopped by user";
+  if (isCancelled) return false;
 
   // If we have status messages but no final tasks, we're still processing
   const hasStatus = agentSteps.status && agentSteps.status.length > 0;

@@ -1,19 +1,30 @@
 import { useState } from "react";
 import { getAgentStepsSummary, isAgentStepsProcessing } from "../../utils/messageGrouper";
+import StreamingStatus from "./StreamingStatus";
 
 /**
  * Collapsible dropdown component for displaying agent processing steps
  * Similar to ChatGPT and Gemini's chain-of-thought UI
  */
-export default function AgentStepsDropdown({ agentSteps, isStreaming = false }) {
+export default function AgentStepsDropdown({ agentSteps, isStreaming = false, messageContent = "", statusMessage = "", streamingEvents = [] }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!agentSteps && !isStreaming) {
     return null;
   }
 
-  const summary = agentSteps ? getAgentStepsSummary(agentSteps) : "Processing...";
-  const isProcessing = isStreaming || (agentSteps && isAgentStepsProcessing(agentSteps));
+  const isCancelled = messageContent === "Generation stopped by user";
+  const summary = isCancelled ? "Generation cancelled" : agentSteps ? getAgentStepsSummary(agentSteps) : "Processing...";
+  const isProcessing = !isCancelled && (isStreaming || (agentSteps && isAgentStepsProcessing(agentSteps, messageContent)));
+
+  // Show streaming status component during active streaming
+  if (isStreaming && isProcessing) {
+    return (
+      <div className="mb-2">
+        <StreamingStatus agentSteps={agentSteps} isStreaming={isStreaming} statusMessage={statusMessage} streamingEvents={streamingEvents} />
+      </div>
+    );
+  }
 
   return (
     <div className="mb-2">
@@ -25,6 +36,12 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false }) 
         <div className="flex items-center space-x-2">
           {isProcessing ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          ) : isCancelled ? (
+            <div className="w-4 h-4 flex items-center justify-center">
+              <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
           ) : (
             <div className="w-4 h-4 flex items-center justify-center">
               <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,7 +55,7 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false }) 
               </svg>
             </div>
           )}
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{summary}</span>
+          <span className={`text-sm font-medium ${isCancelled ? "text-red-700 dark:text-red-300" : "text-gray-700 dark:text-gray-300"}`}>{summary}</span>
         </div>
         <div className={`transform transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
           <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,6 +143,23 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false }) 
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cancellation Step */}
+              {isCancelled && (
+                <div className="border-l-4 border-red-400 pl-3">
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Cancellation</h4>
+                  <div className="flex items-start space-x-2">
+                    <div className="w-2 h-2 rounded-full mt-2 bg-red-500"></div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Generation stopped by user</span>
+                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">cancelled</span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Processing was interrupted before completion</p>
+                    </div>
                   </div>
                 </div>
               )}

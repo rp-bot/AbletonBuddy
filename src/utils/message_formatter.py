@@ -133,6 +133,20 @@ def is_status_message(message) -> bool:
     return content.startswith("Status:")
 
 
+def is_cancelled_message(message) -> bool:
+    """
+    Check if a message is a cancelled message.
+
+    Args:
+        message: A Marvin message object
+
+    Returns:
+        bool: True if message is cancelled
+    """
+    content = extract_message_content(message)
+    return content == "Generation stopped by user"
+
+
 def format_message_for_display(message) -> Dict[str, Any]:
     """
     Format a single message for display.
@@ -152,6 +166,9 @@ def format_message_for_display(message) -> Dict[str, Any]:
         role = "assistant"
         # Remove "Summarization Agent:" prefix
         content = content.replace("Summarization Agent:", "").strip()
+    elif is_cancelled_message(message):
+        role = "assistant"
+        # Keep the cancelled message content as is
     elif is_status_message(message):
         role = "status"
         # Remove "Status:" prefix
@@ -193,6 +210,9 @@ def filter_messages_for_display(
             filtered.append(format_message_for_display(message))
         # Keep summarization messages (assistant responses)
         elif is_summarization_message(message):
+            filtered.append(format_message_for_display(message))
+        # Keep cancelled messages
+        elif is_cancelled_message(message):
             filtered.append(format_message_for_display(message))
         # Optionally include detailed agent messages
         elif include_details:
@@ -237,6 +257,8 @@ def get_detailed_messages(messages: List) -> List[Dict[str, Any]]:
         if is_user_message(message):
             role = "user"
         elif is_summarization_message(message):
+            role = "assistant"
+        elif is_cancelled_message(message):
             role = "assistant"
         elif is_status_message(message):
             role = "status"
@@ -317,6 +339,31 @@ def format_message_for_cli(message_dict: Dict[str, Any]) -> str:
         return f"\n📊 Status: {content}"
     else:
         return f"\n⚙️  System: {content}"
+
+
+def get_display_message_count(messages: List) -> int:
+    """
+    Get the count of displayable messages (user, assistant, and cancelled).
+
+    Args:
+        messages: List of Marvin message objects
+
+    Returns:
+        int: Count of displayable messages
+    """
+    if not messages:
+        return 0
+
+    count = 0
+    for message in messages:
+        if (
+            is_user_message(message)
+            or is_summarization_message(message)
+            or is_cancelled_message(message)
+        ):
+            count += 1
+
+    return count
 
 
 def get_conversation_summary(messages: List) -> str:

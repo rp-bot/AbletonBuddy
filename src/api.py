@@ -133,10 +133,21 @@ async def list_threads():
 
         thread_summaries = []
         for thread in tracked_threads:
+            # Calculate actual message count for this thread
+            try:
+                marvin_thread = marvin.Thread(id=thread.thread_id)
+                messages = marvin_thread.get_messages()
+                from src.utils.message_formatter import get_display_message_count
+
+                actual_message_count = get_display_message_count(messages)
+            except Exception:
+                # Fallback to stored count if calculation fails
+                actual_message_count = thread.message_count
+
             # Use first_message_preview as summary, or fallback to message count
             summary = (
                 thread.first_message_preview
-                or f"Thread with {thread.message_count} messages"
+                or f"Thread with {actual_message_count} messages"
             )
 
             # Truncate summary if too long
@@ -147,7 +158,7 @@ async def list_threads():
                 ThreadSummary(
                     thread_id=thread.thread_id,
                     created_at=thread.created_at.isoformat(),
-                    message_count=thread.message_count,
+                    message_count=actual_message_count,
                     summary=summary,
                 )
             )
@@ -319,7 +330,7 @@ async def add_message(thread_id: str, message: MessageRequest):
         thread.add_messages([UserMessage(content=user_input)])
 
         # Process through agent pipeline
-        disambiguated_input = remove_ambiguity(user_input)
+        disambiguated_input = await remove_ambiguity(user_input)
         thread.add_messages(
             [AgentMessage(content=f"Disambiguation Agent: {disambiguated_input}")]
         )
@@ -329,8 +340,16 @@ async def add_message(thread_id: str, message: MessageRequest):
             clarification_message = handle_ambiguous_input(disambiguated_input)
             thread.add_messages([AgentMessage(content=clarification_message)])
 
-            # Update thread metadata with the clarification
-            await update_thread_metadata(thread_id, last_message=clarification_message)
+            # Calculate message count and update thread metadata
+            messages = thread.get_messages()
+            from src.utils.message_formatter import get_display_message_count
+
+            message_count = get_display_message_count(messages)
+            await update_thread_metadata(
+                thread_id,
+                message_count=message_count,
+                last_message=clarification_message,
+            )
 
             # Return clarification request
             return {
@@ -341,12 +360,12 @@ async def add_message(thread_id: str, message: MessageRequest):
             }
 
         # Classify and extract
-        api_categories = classify_user_input(disambiguated_input)
+        api_categories = await classify_user_input(disambiguated_input)
         thread.add_messages(
             [AgentMessage(content=f"Classification Agent: {api_categories}")]
         )
 
-        user_requests = extract_user_request(disambiguated_input, api_categories)
+        user_requests = await extract_user_request(disambiguated_input, api_categories)
         thread.add_messages(
             [AgentMessage(content=f"Extraction Agent: {user_requests}")]
         )
@@ -355,7 +374,7 @@ async def add_message(thread_id: str, message: MessageRequest):
         tasks = create_and_execute_tasks(user_requests)
 
         for task in tasks:
-            task.run()
+            await task.run_async()
             if task.is_complete:
                 thread.add_messages(
                     [
@@ -382,13 +401,19 @@ async def add_message(thread_id: str, message: MessageRequest):
                 )
 
         # Summarize results
-        summarized_results = summarize_thread(thread)
+        summarized_results = await summarize_thread(thread)
         thread.add_messages(
             [AgentMessage(content=f"Summarization Agent: {summarized_results}")]
         )
 
-        # Update thread metadata with the final response
-        await update_thread_metadata(thread_id, last_message=summarized_results)
+        # Calculate message count and update thread metadata
+        messages = thread.get_messages()
+        from src.utils.message_formatter import get_display_message_count
+
+        message_count = get_display_message_count(messages)
+        await update_thread_metadata(
+            thread_id, message_count=message_count, last_message=summarized_results
+        )
 
         # Return the summarization as assistant response
         return {
@@ -428,7 +453,7 @@ async def process_agent_pipeline(
         thread.add_messages(
             [AgentMessage(content="Status: Understanding your command...")]
         )
-        disambiguated_input = remove_ambiguity(user_input)
+        disambiguated_input = await remove_ambiguity(user_input)
         thread.add_messages(
             [AgentMessage(content=f"Disambiguation Agent: {disambiguated_input}")]
         )
@@ -443,7 +468,16 @@ async def process_agent_pipeline(
         if is_ambiguous_input(disambiguated_input):
             clarification_message = handle_ambiguous_input(disambiguated_input)
             thread.add_messages([AgentMessage(content=clarification_message)])
-            await update_thread_metadata(thread_id, last_message=clarification_message)
+            # Calculate message count and update thread metadata
+            messages = thread.get_messages()
+            from src.utils.message_formatter import get_display_message_count
+
+            message_count = get_display_message_count(messages)
+            await update_thread_metadata(
+                thread_id,
+                message_count=message_count,
+                last_message=clarification_message,
+            )
             await event_queue.put({"event": "assistant", "data": clarification_message})
             await event_queue.put({"event": "done", "data": "Need clarification"})
             return
@@ -453,7 +487,7 @@ async def process_agent_pipeline(
         # Classification
         await event_queue.put({"event": "status", "data": "Identifying operations..."})
         thread.add_messages([AgentMessage(content="Status: Identifying operations...")])
-        api_categories = classify_user_input(disambiguated_input)
+        api_categories = await classify_user_input(disambiguated_input)
         thread.add_messages(
             [AgentMessage(content=f"Classification Agent: {api_categories}")]
         )
@@ -464,7 +498,7 @@ async def process_agent_pipeline(
         # Extraction
         await event_queue.put({"event": "status", "data": "Extracting operations..."})
         thread.add_messages([AgentMessage(content="Status: Extracting operations...")])
-        user_requests = extract_user_request(disambiguated_input, api_categories)
+        user_requests = await extract_user_request(disambiguated_input, api_categories)
         thread.add_messages(
             [AgentMessage(content=f"Extraction Agent: {user_requests}")]
         )
@@ -499,7 +533,7 @@ async def process_agent_pipeline(
                     )
                 ]
             )
-            task.run()
+            await task.run_async()
 
             if task.is_complete:
                 thread.add_messages(
@@ -547,25 +581,48 @@ async def process_agent_pipeline(
         # Summarize
         await event_queue.put({"event": "status", "data": "Preparing response..."})
         thread.add_messages([AgentMessage(content="Status: Preparing response...")])
-        summarized_results = summarize_thread(thread)
+        summarized_results = await summarize_thread(thread)
         thread.add_messages(
             [AgentMessage(content=f"Summarization Agent: {summarized_results}")]
         )
 
         # Send final message
         await event_queue.put({"event": "assistant", "data": summarized_results})
-        await update_thread_metadata(thread_id, last_message=summarized_results)
+        # Calculate message count and update thread metadata
+        messages = thread.get_messages()
+        from src.utils.message_formatter import get_display_message_count
+
+        message_count = get_display_message_count(messages)
+        await update_thread_metadata(
+            thread_id, message_count=message_count, last_message=summarized_results
+        )
         await event_queue.put({"event": "done", "data": "Complete"})
 
     except asyncio.CancelledError:
-        # Handle cancellation - add system message and send cancelled event
+        # Handle cancellation - add assistant message and send proper events
         try:
             thread = marvin.Thread(id=thread_id)
-            thread.add_messages([AgentMessage(content="Generation stopped by user")])
+            # Add assistant message for the cancellation
+            cancelled_message = "Generation stopped by user"
+            thread.add_messages(
+                [AgentMessage(content=f"Summarization Agent: {cancelled_message}")]
+            )
+
+            # Send assistant message first, then cancelled event
+            await event_queue.put({"event": "assistant", "data": cancelled_message})
             await event_queue.put(
                 {"event": "cancelled", "data": "Generation stopped by user"}
             )
             await event_queue.put({"event": "done", "data": "Cancelled"})
+
+            # Calculate message count and update thread metadata
+            messages = thread.get_messages()
+            from src.utils.message_formatter import get_display_message_count
+
+            message_count = get_display_message_count(messages)
+            await update_thread_metadata(
+                thread_id, message_count=message_count, last_message=cancelled_message
+            )
         except Exception:
             pass  # Thread might not exist or be accessible
         raise  # Re-raise to properly handle cancellation

@@ -121,9 +121,10 @@ export default function ThreadList({ onThreadSelect, currentThreadId }) {
                     ? "bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-700"
                     : "hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
+                onClick={() => onThreadSelect(thread.thread_id)}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <div className="flex-1 cursor-pointer" onClick={() => onThreadSelect(thread.thread_id)}>
+                  <div className="flex-1">
                     <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate" title={thread.summary || "New conversation"}>
                       {(thread.summary || "New conversation").length > 20
                         ? (thread.summary || "New conversation").substring(0, 20) + "..."

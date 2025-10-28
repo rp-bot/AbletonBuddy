@@ -15,7 +15,7 @@ export default function ChatContainer({ threadId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { isStreaming, sendMessage, cancelStream } = useStreamingChat(threadId, (updateFn) => {
+  const { isStreaming, statusMessage, streamingEvents, sendMessage, cancelStream } = useStreamingChat(threadId, (updateFn) => {
     setMessages(updateFn);
   });
 
@@ -114,40 +114,50 @@ export default function ChatContainer({ threadId }) {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-xs lg:max-w-md ${message.role === "user" ? "" : "w-full"}`}>
-                    {/* Agent Steps Dropdown for assistant messages */}
-                    {message.role === "assistant" && (
-                      <AgentStepsDropdown
-                        agentSteps={message.agentSteps}
-                        isStreaming={message.isStreaming || (isStreaming && message === messages[messages.length - 1])}
-                      />
-                    )}
+              {messages.map((message) => {
+                const isCancelledMessage = message.content === "Generation stopped by user";
+                return (
+                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-xs lg:max-w-md ${message.role === "user" ? "" : "w-full"}`}>
+                      {/* Agent Steps Dropdown for assistant messages */}
+                      {message.role === "assistant" && (
+                        <AgentStepsDropdown
+                          agentSteps={message.agentSteps}
+                          isStreaming={message.isStreaming || (isStreaming && message === messages[messages.length - 1])}
+                          messageContent={message.content}
+                          statusMessage={statusMessage}
+                          streamingEvents={streamingEvents}
+                        />
+                      )}
 
-                    {/* Message Content */}
-                    <div
-                      className={`px-4 py-2 rounded-lg ${
-                        message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                      }`}
-                    >
-                      <div className="text-sm font-medium mb-1">{message.role === "user" ? "You" : "Ableton Buddy"}</div>
-                      <div className="text-sm">
-                        {message.content ||
-                          (message.isStreaming ? (
-                            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
-                              <span>Thinking...</span>
-                            </div>
-                          ) : (
-                            ""
-                          ))}
+                      {/* Message Content */}
+                      <div
+                        className={`px-4 py-2 rounded-lg ${
+                          message.role === "user"
+                            ? "bg-blue-600 text-white"
+                            : isCancelledMessage
+                            ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-700"
+                            : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        <div className="text-sm font-medium mb-1">{message.role === "user" ? "You" : "Ableton Buddy"}</div>
+                        <div className="text-sm">
+                          {message.content ||
+                            (message.isStreaming ? (
+                              <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
+                                <span>Thinking...</span>
+                              </div>
+                            ) : (
+                              ""
+                            ))}
+                        </div>
+                        {message.content && <div className="text-xs opacity-70 mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>}
                       </div>
-                      {message.content && <div className="text-xs opacity-70 mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -3,7 +3,16 @@
  */
 
 /**
- * Filter messages to show only user and assistant messages
+ * Check if a message is a cancelled message
+ * @param {Object} message - Message object
+ * @returns {boolean} True if message is cancelled
+ */
+function isCancelledMessage(message) {
+  return message.content === "Generation stopped by user";
+}
+
+/**
+ * Filter messages to show user, assistant, and cancelled messages
  * @param {Array} messages - Array of message objects from API
  * @returns {Array} Filtered messages
  */
@@ -12,8 +21,8 @@ export function filterMessagesForDisplay(messages) {
     return [];
   }
 
-  // Filter to show only user and assistant messages
-  return messages.filter((message) => message.role === "user" || message.role === "assistant").map(transformMessage);
+  // Filter to show user, assistant, and cancelled messages
+  return messages.filter((message) => message.role === "user" || message.role === "assistant" || isCancelledMessage(message)).map(transformMessage);
 }
 
 /**
@@ -38,14 +47,14 @@ function transformMessage(message) {
 /**
  * Get message count for a thread
  * @param {Array} messages - Array of message objects
- * @returns {number} Count of user and assistant messages
+ * @returns {number} Count of user, assistant, and cancelled messages
  */
 export function getDisplayMessageCount(messages) {
   if (!messages || !Array.isArray(messages)) {
     return 0;
   }
 
-  return messages.filter((message) => message.role === "user" || message.role === "assistant").length;
+  return messages.filter((message) => message.role === "user" || message.role === "assistant" || isCancelledMessage(message)).length;
 }
 
 /**

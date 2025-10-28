@@ -32,7 +32,7 @@ class APICategory(Enum):
     DEVICE = "Device API - Instrument and effect control: device lists, device parameters, types and per-device property queries."
 
 
-def classify_user_input(
+async def classify_user_input(
     user_input: str, thread: marvin.Thread | None = None
 ) -> List[APICategory]:
     """
@@ -81,7 +81,7 @@ def classify_user_input(
         "Be inclusive when in doubt; multi-label is allowed.\n"
     )
 
-    classification = marvin.classify(
+    classification = await marvin.classify_async(
         user_input,
         labels=label_names,
         multi_label=True,
@@ -184,7 +184,7 @@ def _instruction_for_category(category: APICategory) -> str:
     return base + specifics.get(category, "")
 
 
-def extract_user_request(
+async def extract_user_request(
     user_input: str, categories: List[APICategory], thread: marvin.Thread | None = None
 ) -> Dict[APICategory, List[str]]:
     """
@@ -222,13 +222,13 @@ def extract_user_request(
 
     for category in categories:
         instructions = _instruction_for_category(category)
-        spans = marvin.extract(user_input, str, instructions=instructions)
+        spans = await marvin.extract_async(user_input, str, instructions=instructions)
         extracted_requests[category] = spans if isinstance(spans, list) else [spans]
 
     return extracted_requests
 
 
-def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> str:
+async def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> str:
     """
     Remove ambiguity from user input by resolving pronouns, unclear references, and incomplete commands.
 
@@ -302,7 +302,7 @@ def remove_ambiguity(user_input: str, thread: marvin.Thread | None = None) -> st
         "Return only the disambiguated text or the NEED_MORE_CONTEXT message, no additional commentary."
     )
 
-    return marvin.run(
+    return await marvin.run_async(
         instructions=instructions,
         result_type=str,
         # thread=thread,
@@ -527,7 +527,7 @@ Focus on per-track operations. For global track management (create/delete/duplic
 """
 
 
-def summarize_thread(thread: marvin.Thread) -> str:
+async def summarize_thread(thread: marvin.Thread) -> str:
     """
     Summarize the results of a thread using marvin.summarize.
 
@@ -554,5 +554,5 @@ def summarize_thread(thread: marvin.Thread) -> str:
         "Avoid technical jargon and focus on what the user needs to know."
     )
 
-    summary = marvin.summarize(thread_messages, instructions=instructions)
+    summary = await marvin.summarize_async(thread_messages, instructions=instructions)
     return summary

@@ -117,42 +117,46 @@ export function useStreamingChat(threadId, onMessageUpdate) {
         break;
 
       case "disambiguation":
-        setStatusMessage(`Understanding: ${data}`);
+        setStatusMessage("Clarifying your request...");
         break;
 
       case "classification":
-        setStatusMessage(`Identifying operations: ${data}`);
+        setStatusMessage("Classifying operations...");
         break;
 
       case "extraction":
-        setStatusMessage(`Extracting operations: ${data}`);
+        setStatusMessage("Extracting details...");
         break;
 
       case "task_success":
-        setStatusMessage(`Task completed: ${data}`);
+        setStatusMessage("Executing tasks...");
         break;
 
       case "task_skipped":
-        setStatusMessage(`Task skipped: ${data}`);
+        setStatusMessage("Skipping task...");
         break;
 
       case "task_failed":
-        setStatusMessage(`Task failed: ${data}`);
+        setStatusMessage("Handling task error...");
         break;
 
       case "assistant":
         // Final response - update placeholder message with content
-        setStatusMessage("");
+        setStatusMessage("Finalizing response...");
         if (onMessageUpdate && placeholderId) {
           // Use the current accumulated steps before they get cleared
           const currentSteps = [...accumulatedAgentSteps];
           const parsedSteps = parseAccumulatedAgentSteps(currentSteps);
+
+          // Remove "Summarization Agent:" prefix if present (like backend does)
+          const cleanContent = data.replace("Summarization Agent:", "").trim();
+
           onMessageUpdate((prevMessages) =>
             prevMessages.map((msg) => {
               if (msg.id === placeholderId) {
                 return {
                   ...msg,
-                  content: data,
+                  content: cleanContent,
                   agentSteps: parsedSteps,
                   isStreaming: false,
                 };
@@ -174,21 +178,34 @@ export function useStreamingChat(threadId, onMessageUpdate) {
         break;
 
       case "cancelled":
-        setStatusMessage(`Generation stopped by user`);
+        setStatusMessage("");
+        // Update message with accumulated steps and cancelled content
         if (onMessageUpdate && placeholderId) {
+          const currentSteps = [...accumulatedAgentSteps];
+          const parsedSteps = parseAccumulatedAgentSteps(currentSteps);
+
+          // Remove "Summarization Agent:" prefix if present (like backend does)
+          const cleanContent = data.replace("Summarization Agent:", "").trim();
+
           onMessageUpdate((prevMessages) =>
             prevMessages.map((msg) => {
               if (msg.id === placeholderId) {
                 return {
                   ...msg,
-                  content: "Generation stopped by user",
+                  content: cleanContent,
+                  agentSteps: parsedSteps,
                   isStreaming: false,
                 };
               }
               return msg;
             }),
           );
+          setAccumulatedAgentSteps([]);
         }
+        // Reload thread data to get persisted state
+        setTimeout(() => {
+          reloadThreadData();
+        }, 1000);
         break;
 
       case "error":
@@ -352,5 +369,6 @@ export function useStreamingChat(threadId, onMessageUpdate) {
     sendMessage,
     cancelStream: cancelCurrentStream,
     clearStatus,
+    reloadThreadData,
   };
 }
