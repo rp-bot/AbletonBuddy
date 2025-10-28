@@ -27,12 +27,37 @@ def extract_message_content(message) -> str:
         if hasattr(msg_obj, "parts"):
             for part in msg_obj.parts:
                 if hasattr(part, "content"):
-                    content += part.content + " "
+                    # Handle case where content is a list
+                    if isinstance(part.content, list):
+                        for item in part.content:
+                            if isinstance(item, str):
+                                content += item + " "
+                            else:
+                                content += str(item) + " "
+                    # Handle case where content is a string
+                    elif isinstance(part.content, str):
+                        content += part.content + " "
+                    else:
+                        content += str(part.content) + " "
         # Try direct content attribute
         elif hasattr(msg_obj, "content"):
-            content = msg_obj.content
+            if isinstance(msg_obj.content, list):
+                for item in msg_obj.content:
+                    if isinstance(item, str):
+                        content += item + " "
+                    else:
+                        content += str(item) + " "
+            else:
+                content = str(msg_obj.content)
     elif hasattr(message, "content"):
-        content = message.content
+        if isinstance(message.content, list):
+            for item in message.content:
+                if isinstance(item, str):
+                    content += item + " "
+                else:
+                    content += str(item) + " "
+        else:
+            content = str(message.content)
 
     return content.strip()
 
@@ -49,7 +74,30 @@ def is_user_message(message) -> bool:
     """
     if hasattr(message, "message"):
         message_type = type(message.message).__name__
-        return message_type in ["UserMessage", "ModelRequest"]
+
+        # Only UserMessage is definitely a user message
+        if message_type == "UserMessage":
+            return True
+
+        # For ModelRequest, check the content to determine if it's actually a user message
+        if message_type == "ModelRequest":
+            content = extract_message_content(message)
+            # If it starts with task tags or contains agent keywords, it's not a user message
+            if (
+                content.startswith("<task>")
+                or content.startswith("Summarization Agent:")
+                or content.startswith("Disambiguation Agent:")
+                or content.startswith("Classification Agent:")
+                or content.startswith("Extraction Agent:")
+                or content.startswith("Task Created:")
+                or content.startswith("Task Successful:")
+                or content.startswith("Task Failed:")
+                or content.startswith("Task Skipped:")
+            ):
+                return False
+            # Otherwise, it's likely a user message
+            return True
+
     return False
 
 
@@ -64,7 +112,39 @@ def is_summarization_message(message) -> bool:
         bool: True if message is a summarization
     """
     content = extract_message_content(message)
-    return content.startswith("Summarization Agent:")
+    return (
+        content.startswith("Summarization Agent:")
+        or content.startswith("<task>")
+        or "Summarize Task" in content
+    )
+
+
+def is_status_message(message) -> bool:
+    """
+    Check if a message is a status update message.
+
+    Args:
+        message: A Marvin message object
+
+    Returns:
+        bool: True if message is a status update
+    """
+    content = extract_message_content(message)
+    return content.startswith("Status:")
+
+
+def is_cancelled_message(message) -> bool:
+    """
+    Check if a message is a cancelled message.
+
+    Args:
+        message: A Marvin message object
+
+    Returns:
+        bool: True if message is cancelled
+    """
+    content = extract_message_content(message)
+    return content == "Generation stopped by user"
 
 
 def format_message_for_display(message) -> Dict[str, Any]:
@@ -86,6 +166,13 @@ def format_message_for_display(message) -> Dict[str, Any]:
         role = "assistant"
         # Remove "Summarization Agent:" prefix
         content = content.replace("Summarization Agent:", "").strip()
+    elif is_cancelled_message(message):
+        role = "assistant"
+        # Keep the cancelled message content as is
+    elif is_status_message(message):
+        role = "status"
+        # Remove "Status:" prefix
+        content = content.replace("Status:", "").strip()
     else:
         role = "system"
 
@@ -124,10 +211,13 @@ def filter_messages_for_display(
         # Keep summarization messages (assistant responses)
         elif is_summarization_message(message):
             filtered.append(format_message_for_display(message))
+        # Keep cancelled messages
+        elif is_cancelled_message(message):
+            filtered.append(format_message_for_display(message))
         # Optionally include detailed agent messages
         elif include_details:
             content = extract_message_content(message)
-            # Include task results and important agent messages
+            # Include task results, important agent messages, and status messages
             if any(
                 keyword in content
                 for keyword in [
@@ -138,9 +228,11 @@ def filter_messages_for_display(
                     "Classification Agent",
                     "Extraction Agent",
                 ]
-            ):
+            ) or is_status_message(message):
                 formatted = format_message_for_display(message)
-                formatted["role"] = "system"  # Mark as system message
+                # Keep the original role for status messages, mark others as system
+                if not is_status_message(message):
+                    formatted["role"] = "system"
                 filtered.append(formatted)
 
     return filtered
@@ -166,6 +258,10 @@ def get_detailed_messages(messages: List) -> List[Dict[str, Any]]:
             role = "user"
         elif is_summarization_message(message):
             role = "assistant"
+        elif is_cancelled_message(message):
+            role = "assistant"
+        elif is_status_message(message):
+            role = "status"
         elif "Disambiguation Agent" in content:
             role = "disambiguation"
         elif "Classification Agent" in content:
@@ -239,8 +335,35 @@ def format_message_for_cli(message_dict: Dict[str, Any]) -> str:
         return f"\n🎹 You: {content}"
     elif role == "assistant":
         return f"\n🎵 Assistant: {content}"
+    elif role == "status":
+        return f"\n📊 Status: {content}"
     else:
         return f"\n⚙️  System: {content}"
+
+
+def get_display_message_count(messages: List) -> int:
+    """
+    Get the count of displayable messages (user, assistant, and cancelled).
+
+    Args:
+        messages: List of Marvin message objects
+
+    Returns:
+        int: Count of displayable messages
+    """
+    if not messages:
+        return 0
+
+    count = 0
+    for message in messages:
+        if (
+            is_user_message(message)
+            or is_summarization_message(message)
+            or is_cancelled_message(message)
+        ):
+            count += 1
+
+    return count
 
 
 def get_conversation_summary(messages: List) -> str:
