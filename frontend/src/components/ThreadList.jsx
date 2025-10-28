@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { FaEdit } from "react-icons/fa";
 import { listThreads, createThread, deleteThread } from "../api/client";
 import { getDisplayMessageCount, getThreadPreview } from "../utils/messageFilter";
 
@@ -100,8 +101,12 @@ export default function ThreadList({ onThreadSelect, currentThreadId }) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <button onClick={handleCreateThread} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm">
-          + New Thread
+        <button
+          onClick={handleCreateThread}
+          className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center justify-center space-x-2"
+        >
+          <FaEdit className="w-4 h-4" />
+          <span>New Thread</span>
         </button>
       </div>
 

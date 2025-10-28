@@ -55,7 +55,7 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
               </svg>
             </div>
           )}
-          <span className={`text-sm font-medium ${isCancelled ? "text-red-700 dark:text-red-300" : "text-gray-700 dark:text-gray-300"}`}>{summary}</span>
+          <span className={`text-base font-medium ${isCancelled ? "text-red-700 dark:text-red-300" : "text-gray-700 dark:text-gray-300"}`}>{summary}</span>
         </div>
         <div className={`transform transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
           <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,24 +72,24 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
               {/* Disambiguation */}
               {agentSteps.disambiguation && (
                 <div className="border-l-4 border-blue-400 pl-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Understanding</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{agentSteps.disambiguation.data}</p>
+                  <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Understanding</h4>
+                  <p className="text-base text-gray-600 dark:text-gray-400">{agentSteps.disambiguation.data}</p>
                 </div>
               )}
 
               {/* Classification */}
               {agentSteps.classification && (
                 <div className="border-l-4 border-green-400 pl-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Classification</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{agentSteps.classification.data}</p>
+                  <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Classification</h4>
+                  <p className="text-base text-gray-600 dark:text-gray-400">{agentSteps.classification.data}</p>
                 </div>
               )}
 
               {/* Extraction */}
               {agentSteps.extraction && (
                 <div className="border-l-4 border-yellow-400 pl-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Extraction</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{agentSteps.extraction.data}</p>
+                  <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Extraction</h4>
+                  <p className="text-base text-gray-600 dark:text-gray-400">{agentSteps.extraction.data}</p>
                 </div>
               )}
 
@@ -110,7 +110,7 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
               {/* Task Execution */}
               {agentSteps.tasks && agentSteps.tasks.length > 0 && (
                 <div className="border-l-4 border-purple-400 pl-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Task Execution</h4>
+                  <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">Task Execution</h4>
                   <div className="space-y-2">
                     {agentSteps.tasks.map((task, index) => (
                       <div key={index} className="flex items-start space-x-2">
@@ -121,9 +121,9 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
                         ></div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{task.name}</span>
+                            <span className="text-base font-medium text-gray-800 dark:text-gray-200">{task.name}</span>
                             <span
-                              className={`px-2 py-1 text-xs rounded-full ${
+                              className={`px-2 py-1 text-sm rounded-full ${
                                 task.status === "success"
                                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                   : task.status === "failed"
@@ -134,10 +134,10 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
                               {task.status}
                             </span>
                           </div>
-                          {task.result && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.result}</p>}
+                          {task.result && <p className="text-base text-gray-600 dark:text-gray-400 mt-1">{task.result}</p>}
                           {task.tools && task.tools.length > 0 && (
                             <div className="mt-1">
-                              <span className="text-xs text-gray-500 dark:text-gray-500">Tools: {task.tools.join(", ")}</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-500">Tools: {task.tools.join(", ")}</span>
                             </div>
                           )}
                         </div>
@@ -150,22 +150,22 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
               {/* Cancellation Step */}
               {isCancelled && (
                 <div className="border-l-4 border-red-400 pl-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Cancellation</h4>
+                  <h4 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">Cancellation</h4>
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 rounded-full mt-2 bg-red-500"></div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Generation stopped by user</span>
-                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">cancelled</span>
+                        <span className="text-base font-medium text-gray-800 dark:text-gray-200">Generation stopped by user</span>
+                        <span className="px-2 py-1 text-sm rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">cancelled</span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Processing was interrupted before completion</p>
+                      <p className="text-base text-gray-600 dark:text-gray-400 mt-1">Processing was interrupted before completion</p>
                     </div>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center space-x-2 text-base text-gray-600 dark:text-gray-400">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               <span>Processing your request...</span>
             </div>

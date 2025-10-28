@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { MainContainer, ChatContainer as ChatScopeChatContainer } from "@chatscope/chat-ui-kit-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { getThreadDetailed } from "../../api/client";
 import { useStreamingChat } from "../../hooks/useStreamingChat";
 import { groupMessagesWithAgentSteps } from "../../utils/messageGrouper";
 import MessageList from "./MessageList";
 import InputArea from "./InputArea";
 import AgentStepsDropdown from "./AgentStepsDropdown";
+import Avatar from "./Avatar";
 
 /**
  * Main chat container component
@@ -117,8 +120,11 @@ export default function ChatContainer({ threadId }) {
               {messages.map((message) => {
                 const isCancelledMessage = message.content === "Generation stopped by user";
                 return (
-                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-xs lg:max-w-md ${message.role === "user" ? "" : "w-full"}`}>
+                  <div key={message.id} className={`flex items-start space-x-3 ${message.role === "user" ? "flex-row-reverse space-x-reverse" : ""}`}>
+                    {/* Avatar */}
+                    <Avatar role={message.role} size="md" />
+
+                    <div className={`flex-1 ${message.role === "user" ? "max-w-xs lg:max-w-md" : "w-full"}`}>
                       {/* Agent Steps Dropdown for assistant messages */}
                       {message.role === "assistant" && (
                         <AgentStepsDropdown
@@ -132,7 +138,7 @@ export default function ChatContainer({ threadId }) {
 
                       {/* Message Content */}
                       <div
-                        className={`px-4 py-2 rounded-lg ${
+                        className={`px-4 py-3 rounded-lg ${
                           message.role === "user"
                             ? "bg-blue-600 text-white"
                             : isCancelledMessage
@@ -140,19 +146,25 @@ export default function ChatContainer({ threadId }) {
                             : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
                         }`}
                       >
-                        <div className="text-sm font-medium mb-1">{message.role === "user" ? "You" : "Ableton Buddy"}</div>
-                        <div className="text-sm">
-                          {message.content ||
-                            (message.isStreaming ? (
-                              <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
-                                <span>Thinking...</span>
+                        <div className="text-lg message-content">
+                          {message.content ? (
+                            message.role === "assistant" ? (
+                              <div className="markdown-content">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                               </div>
                             ) : (
-                              ""
-                            ))}
+                              message.content
+                            )
+                          ) : message.isStreaming ? (
+                            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500"></div>
+                              <span>Thinking...</span>
+                            </div>
+                          ) : (
+                            ""
+                          )}
                         </div>
-                        {message.content && <div className="text-xs opacity-70 mt-1">{new Date(message.timestamp).toLocaleTimeString()}</div>}
+                        {message.content && <div className="text-xs opacity-70 mt-2">{new Date(message.timestamp).toLocaleTimeString()}</div>}
                       </div>
                     </div>
                   </div>
