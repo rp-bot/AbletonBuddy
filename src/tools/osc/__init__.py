@@ -6,9 +6,9 @@ from tools.osc.song_tools import (
 )
 
 __all__ = [
-    'OSCClient',
-    'OSCResponse',
-    'query_ableton',
-    'control_ableton',
-    'test_connection',
+    "OSCClient",
+    "OSCResponse",
+    "query_ableton",
+    "control_ableton",
+    "test_connection",
 ]

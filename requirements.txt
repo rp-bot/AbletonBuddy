@@ -1,3 +1,7 @@
 marvin
 python-osc
 pydantic
+fastapi
+uvicorn
+sse-starlette
+aiosqlite
