@@ -8,14 +8,11 @@ import threading
 import time
 from typing import Any, List, Optional
 
+from pythonosc import udp_client
+from pythonosc.dispatcher import Dispatcher
+from pythonosc.osc_server import ThreadingOSCUDPServer
 
-# try:
-#     from pythonosc import udp_client
-#     from pythonosc.dispatcher import Dispatcher
-#     from pythonosc.osc_server import ThreadingOSCUDPServer
-#     OSC_AVAILABLE = True
-# except ImportError:
-OSC_AVAILABLE = False
+OSC_AVAILABLE = True # Set to False to run in simulation mode
 
 
 class OSCResponse:
