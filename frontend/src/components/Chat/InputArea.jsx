@@ -1,11 +1,30 @@
 import { useState } from "react";
 import { MessageInput } from "@chatscope/chat-ui-kit-react";
+import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
+import MicrophoneButton from "./MicrophoneButton";
 
 /**
  * Input area component for sending messages
  */
 export default function InputArea({ onSendMessage, isStreaming, disabled }) {
   const [message, setMessage] = useState("");
+
+  const handleTranscript = (transcript) => {
+    // Append transcript to existing message or set as new message
+    setMessage((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${transcript}` : transcript;
+    });
+  };
+
+  const {
+    isRecording,
+    isProcessing,
+    error: recordingError,
+    startRecording,
+    stopRecording,
+    toggleRecording,
+  } = useVoiceRecorder(handleTranscript);
 
   const handleSend = () => {
     if (message.trim() && !disabled && !isStreaming) {
@@ -21,10 +40,12 @@ export default function InputArea({ onSendMessage, isStreaming, disabled }) {
     }
   };
 
+  const isVoiceDisabled = disabled || isStreaming;
+
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 p-4">
       <div className="flex items-end space-x-2">
-        <div className="flex-1">
+        <div className="relative flex-1">
           <MessageInput
             placeholder={isStreaming ? "Processing..." : "Type your message..."}
             value={message}
@@ -33,7 +54,25 @@ export default function InputArea({ onSendMessage, isStreaming, disabled }) {
             disabled={disabled || isStreaming}
             attachButton={false}
             sendButton={false}
+            style={{ paddingRight: "80px" }}
           />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 items-center z-10">
+            <MicrophoneButton
+              mode="hold"
+              isRecording={isRecording}
+              isProcessing={isProcessing}
+              onStart={() => startRecording("hold")}
+              onStop={stopRecording}
+              disabled={isVoiceDisabled}
+            />
+            <MicrophoneButton
+              mode="toggle"
+              isRecording={isRecording}
+              isProcessing={isProcessing}
+              onToggle={toggleRecording}
+              disabled={isVoiceDisabled}
+            />
+          </div>
         </div>
         <button
           onClick={handleSend}
@@ -43,6 +82,9 @@ export default function InputArea({ onSendMessage, isStreaming, disabled }) {
           {isStreaming ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "Send"}
         </button>
       </div>
+      {recordingError && (
+        <div className="mt-2 text-sm text-red-600 dark:text-red-400">{recordingError}</div>
+      )}
     </div>
   );
 }

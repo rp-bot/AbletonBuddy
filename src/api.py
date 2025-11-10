@@ -5,7 +5,7 @@ Provides REST API endpoints for conversation management and real-time streaming.
 
 from typing import List, Dict, Any
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -14,6 +14,8 @@ from marvin.engine.llm import UserMessage, AgentMessage
 from marvin.database import get_async_session, DBThread, DBMessage
 from sqlalchemy import delete
 import asyncio
+import os
+from deepgram import DeepgramClient, PrerecordedOptions, FileSource
 from database import (
     register_thread,
     get_tracked_threads,
@@ -730,6 +732,65 @@ async def cancel_stream(thread_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/transcribe")
+async def transcribe_audio(audio: UploadFile = File(...)):
+    """
+    Transcribe audio file using Deepgram API.
+
+    Args:
+        audio: Audio file to transcribe (supports common audio formats)
+
+    Returns:
+        Dictionary with transcribed text
+    """
+    try:
+        # Get Deepgram API key from environment
+        api_key = os.getenv("DEEPGRAM_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=500, detail="DEEPGRAM_API_KEY not configured"
+            )
+
+        # Initialize Deepgram client
+        deepgram = DeepgramClient(api_key)
+
+        # Read audio file content
+        audio_content = await audio.read()
+
+        # Create file source
+        payload: FileSource = {
+            "buffer": audio_content,
+        }
+
+        # Configure transcription options
+        options = PrerecordedOptions(
+            model="nova-2",
+            language="en-US",
+            smart_format=True,
+        )
+
+        # Transcribe audio (run in thread pool since Deepgram SDK is synchronous)
+        def transcribe():
+            return deepgram.listen.rest.v("1").transcribe_file(payload, options)
+        
+        response = await asyncio.to_thread(transcribe)
+
+        # Extract transcript text
+        if response.results and response.results.channels and len(response.results.channels) > 0:
+            transcript = response.results.channels[0].alternatives[0].transcript
+        else:
+            transcript = ""
+
+        return {"text": transcript}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Transcription failed: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

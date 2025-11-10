@@ -155,3 +155,26 @@ export async function deleteThread(threadId) {
   }
   return response.json();
 }
+
+/**
+ * Transcribe audio file using Deepgram
+ * @param {Blob} audioBlob - Audio blob to transcribe
+ * @returns {Promise<string>} Transcribed text
+ */
+export async function transcribeAudio(audioBlob) {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "audio.webm");
+
+  const response = await fetch(`${API_BASE_URL}/transcribe`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: "Transcription failed" }));
+    throw new Error(errorData.detail || "Failed to transcribe audio");
+  }
+
+  const data = await response.json();
+  return data.text;
+}
