@@ -3,8 +3,9 @@ Public API for Ableton agent helpers.
 """
 
 from .categories import APICategory
-from .classification import classify_user_input, extract_user_request
+from .classification import classify_user_input
 from .disambiguation import handle_ambiguous_input, is_ambiguous_input, remove_ambiguity
+from .extraction import extract_user_request
 from .summary import summarize_thread
 from .tasks import create_and_execute_tasks
 
@@ -18,4 +19,3 @@ __all__ = [
     "create_and_execute_tasks",
     "summarize_thread",
 ]
-
