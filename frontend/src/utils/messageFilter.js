@@ -22,7 +22,7 @@ export function filterMessagesForDisplay(messages) {
   }
 
   // Filter to show user, assistant, and cancelled messages
-  return messages.filter((message) => message.role === "user" || message.role === "assistant" || isCancelledMessage(message)).map(transformMessage);
+  return messages.filter((message) => ["user", "assistant", "clarification"].includes(message.role) || isCancelledMessage(message)).map(transformMessage);
 }
 
 /**
@@ -31,14 +31,16 @@ export function filterMessagesForDisplay(messages) {
  * @returns {Object} Transformed message for ChatScope
  */
 function transformMessage(message) {
+  const isAssistantLike = message.role === "assistant" || message.role === "clarification" || isCancelledMessage(message);
   return {
     id: message.id,
-    type: message.role === "user" ? "text" : "text",
+    type: "text",
     direction: message.role === "user" ? "outgoing" : "incoming",
     position: "normal",
     text: message.content,
     timestamp: new Date(message.timestamp),
     sender: message.role === "user" ? "You" : "Ableton Buddy",
+    role: isAssistantLike ? "assistant" : message.role,
     // Store original message for detailed view
     originalMessage: message,
   };
@@ -54,7 +56,7 @@ export function getDisplayMessageCount(messages) {
     return 0;
   }
 
-  return messages.filter((message) => message.role === "user" || message.role === "assistant" || isCancelledMessage(message)).length;
+  return messages.filter((message) => ["user", "assistant", "clarification"].includes(message.role) || isCancelledMessage(message)).length;
 }
 
 /**

@@ -150,6 +150,7 @@ export function useStreamingChat(threadId, onMessageUpdate) {
 
           // Remove "Summarization Agent:" prefix if present (like backend does)
           const cleanContent = data.replace("Summarization Agent:", "").trim();
+          const isClarification = cleanContent.startsWith("I need more information to help you");
 
           onMessageUpdate((prevMessages) =>
             prevMessages.map((msg) => {
@@ -159,6 +160,7 @@ export function useStreamingChat(threadId, onMessageUpdate) {
                   content: cleanContent,
                   agentSteps: parsedSteps,
                   isStreaming: false,
+                  messageType: isClarification ? "clarification" : "assistant",
                 };
               }
               return msg;
@@ -195,6 +197,7 @@ export function useStreamingChat(threadId, onMessageUpdate) {
                   content: cleanContent,
                   agentSteps: parsedSteps,
                   isStreaming: false,
+                  messageType: "assistant",
                 };
               }
               return msg;

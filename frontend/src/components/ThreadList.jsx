@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { FaEdit } from "react-icons/fa";
 import { listThreads, createThread, deleteThread } from "../api/client";
-import { getDisplayMessageCount, getThreadPreview } from "../utils/messageFilter";
 
 /**
  * Thread list component for sidebar

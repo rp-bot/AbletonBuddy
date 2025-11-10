@@ -63,6 +63,7 @@ export default function ChatContainer({ threadId }) {
       role: "assistant",
       content: "",
       timestamp: new Date().toISOString(),
+      messageType: "assistant",
       agentSteps: {
         status: [],
         disambiguation: null,
@@ -131,6 +132,7 @@ export default function ChatContainer({ threadId }) {
                           agentSteps={message.agentSteps}
                           isStreaming={message.isStreaming || (isStreaming && message === messages[messages.length - 1])}
                           messageContent={message.content}
+                          messageType={message.messageType}
                           statusMessage={statusMessage}
                           streamingEvents={streamingEvents}
                         />

@@ -6,7 +6,14 @@ import StreamingStatus from "./StreamingStatus";
  * Collapsible dropdown component for displaying agent processing steps
  * Similar to ChatGPT and Gemini's chain-of-thought UI
  */
-export default function AgentStepsDropdown({ agentSteps, isStreaming = false, messageContent = "", statusMessage = "", streamingEvents = [] }) {
+export default function AgentStepsDropdown({
+  agentSteps,
+  isStreaming = false,
+  messageContent = "",
+  messageType = "assistant",
+  statusMessage = "",
+  streamingEvents = [],
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!agentSteps && !isStreaming) {
@@ -14,8 +21,18 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
   }
 
   const isCancelled = messageContent === "Generation stopped by user";
-  const summary = isCancelled ? "Generation cancelled" : agentSteps ? getAgentStepsSummary(agentSteps) : "Processing...";
-  const isProcessing = !isCancelled && (isStreaming || (agentSteps && isAgentStepsProcessing(agentSteps, messageContent)));
+  const isClarification = messageType === "clarification" || messageContent.startsWith("I need more information to help you");
+  const summary = isCancelled
+    ? "Generation cancelled"
+    : isClarification
+    ? "Clarification requested"
+    : agentSteps
+    ? getAgentStepsSummary(agentSteps)
+    : "Processing...";
+  const isProcessing =
+    !isCancelled &&
+    !isClarification &&
+    (isStreaming || (agentSteps && isAgentStepsProcessing(agentSteps, messageContent, messageType)));
 
   // Show streaming status component during active streaming
   if (isStreaming && isProcessing) {
@@ -40,6 +57,12 @@ export default function AgentStepsDropdown({ agentSteps, isStreaming = false, me
             <div className="w-4 h-4 flex items-center justify-center">
               <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          ) : isClarification ? (
+            <div className="w-4 h-4 flex items-center justify-center">
+              <svg className="w-4 h-4 text-yellow-500 dark:text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 110-18 9 9 0 010 18z" />
               </svg>
             </div>
           ) : (

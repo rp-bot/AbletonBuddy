@@ -38,17 +38,22 @@ export function groupMessagesWithAgentSteps(messages) {
         ...message,
         agentSteps: null,
       });
-    } else if (role === "assistant") {
+    } else if (role === "assistant" || role === "clarification") {
       // This is the final summarization message - attach current agent steps
       const parsedSteps = parseAgentSteps(currentAgentSteps);
 
       // Clean the content by removing "Summarization Agent:" prefix (like backend does)
-      const cleanContent = message.content.replace("Summarization Agent:", "").trim();
+      const cleanContent =
+        role === "assistant"
+          ? message.content.replace("Summarization Agent:", "").trim()
+          : message.content.replace("Clarification Agent:", "").trim();
 
       // console.log("Assistant message - currentAgentSteps:", currentAgentSteps);
       // console.log("Assistant message - parsedSteps:", parsedSteps);
       groupedMessages.push({
         ...message,
+        role: "assistant",
+        messageType: role,
         content: cleanContent,
         agentSteps: parsedSteps,
       });
@@ -205,12 +210,16 @@ export function getAgentStepsSummary(agentSteps) {
  * @param {string} messageContent - The message content to check for cancellation
  * @returns {boolean} True if still processing
  */
-export function isAgentStepsProcessing(agentSteps, messageContent = "") {
+export function isAgentStepsProcessing(agentSteps, messageContent = "", messageType = "assistant") {
   if (!agentSteps) return true;
 
   // If message is cancelled, it's not processing
   const isCancelled = messageContent === "Generation stopped by user";
   if (isCancelled) return false;
+
+  if (messageType === "clarification" || messageContent.startsWith("I need more information to help you")) {
+    return false;
+  }
 
   // If we have status messages but no final tasks, we're still processing
   const hasStatus = agentSteps.status && agentSteps.status.length > 0;

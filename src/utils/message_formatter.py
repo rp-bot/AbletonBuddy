@@ -133,6 +133,22 @@ def is_status_message(message) -> bool:
     return content.startswith("Status:")
 
 
+def is_clarification_message(message) -> bool:
+    """
+    Check if a message is a clarification request sent to the user.
+
+    Args:
+        message: A Marvin message object
+
+    Returns:
+        bool: True if message is a clarification request
+    """
+    content = extract_message_content(message)
+    return content.startswith(
+        "I need more information to help you"
+    ) or content.startswith("Clarification Agent:")
+
+
 def is_cancelled_message(message) -> bool:
     """
     Check if a message is a cancelled message.
@@ -166,6 +182,10 @@ def format_message_for_display(message) -> Dict[str, Any]:
         role = "assistant"
         # Remove "Summarization Agent:" prefix
         content = content.replace("Summarization Agent:", "").strip()
+    elif is_clarification_message(message):
+        role = "assistant"
+        # Remove optional "Clarification Agent:" prefix if present
+        content = content.replace("Clarification Agent:", "").strip()
     elif is_cancelled_message(message):
         role = "assistant"
         # Keep the cancelled message content as is
@@ -210,6 +230,9 @@ def filter_messages_for_display(
             filtered.append(format_message_for_display(message))
         # Keep summarization messages (assistant responses)
         elif is_summarization_message(message):
+            filtered.append(format_message_for_display(message))
+        # Keep clarification requests
+        elif is_clarification_message(message):
             filtered.append(format_message_for_display(message))
         # Keep cancelled messages
         elif is_cancelled_message(message):
@@ -262,6 +285,8 @@ def get_detailed_messages(messages: List) -> List[Dict[str, Any]]:
             role = "assistant"
         elif is_status_message(message):
             role = "status"
+        elif is_clarification_message(message):
+            role = "clarification"
         elif "Disambiguation Agent" in content:
             role = "disambiguation"
         elif "Classification Agent" in content:
