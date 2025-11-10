@@ -29,20 +29,20 @@ async def classify_user_input(
         "Task: Given a user's natural language request about Ableton Live, "
         "select ALL applicable API categories that best match the intended operation(s).\n\n"
         "Categories (choose all that apply):\n"
-        "- APPLICATION: Control/query Live application itself (startup/errors, logs, Live version).\n"
-        "- SONG: Global transport and session state (play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature, loop settings, recording/session_record/arrangement_overdub, undo/redo, navigation/jump, track/scene creation/deletion, groove/quantization, punch/nudge, stop_all_clips).\n"
-        "- VIEW: UI selection and view state (selected track/scene/clip/device, navigating/selecting in UI).\n"
-        "- TRACK: Per-track operations (arm/mute/solo, volume, panning, sends, stop_all_clips on track, name, color/color_index, routing channels/types, monitoring state, meters, fold_state for groups, has_audio/midi_input/output, fired/playing_slot_index, track devices/clips queries).\n"
-        "- CLIP_SLOT: Operations on a slot that may or may not contain a clip (create/delete clip in slot, check slot state).\n"
-        "- CLIP: Operations on an individual clip (launch/stop, looping, length, start time, notes, properties).\n"
-        "- SCENE: Scene-level actions (create/duplicate/delete scenes, trigger scenes, scene indices/properties).\n"
-        "- DEVICE: Instrument/effect device control and queries (device lists, parameters, device-specific properties).\n\n"
+        "- APPLICATION: AbletonOSC diagnostics and application metadata (connectivity test, Live version, log level management, reload).\n"
+        "- SONG: Global transport/session control (play/stop/continue, tempo, metronome, song position/length, time signature, loop, recording, undo/redo, navigation, track/scene creation/deletion, quantization, punch/nudge, stop_all_clips).\n"
+        "- VIEW: UI selection/navigation (query or set selected track/scene/clip/device, start/stop listening to selection changes).\n"
+        "- TRACK: Per-track operations (arm/mute/solo, volume, panning, sends, routing, meters, properties, device lists, bulk clip queries, stop_all_clips).\n"
+        "- CLIP_SLOT: Slot container operations (create/delete clip in slot, fire slot, set/inspect stop button, duplicate slot content).\n"
+        "- CLIP: Individual clip operations (launch/stop, looping, length, markers, pitch, notes, properties).\n"
+        "- SCENE: Scene-level operations (trigger scenes, set scene tempo/time signature/name/color, check scene state).\n"
+        "- DEVICE: Device-level operations (list devices, get/set parameters, query parameter metadata).\n\n"
         "Disambiguation rules:\n"
         "- If the request is about PLAY/STOP/tempo/metronome/loop/recording/navigation/undo/redo or overall session state: include SONG.\n"
         "- If it's about track/scene creation/deletion/duplication: include SONG (prefer SONG over TRACK for global track management).\n"
-        "- If it's about UI selection/navigating what is selected: include VIEW (and also the target domain when relevant).\n"
+        "- If it's about UI selection (knowing/setting selected track/scene/clip/device) or listening for selection changes: include VIEW (and also include the target domain when follow-up operations are needed).\n"
         "- If it's about a specific track's mix controls (arm/mute/solo/volume/pan/sends), routing, meters, properties (name/color), stopping clips on a track, or querying ALL clips on a track (bulk clip queries): include TRACK.\n"
-        "- If it's about creating/deleting or checking a slot: include CLIP_SLOT.\n"
+        "- If it's about creating/deleting a slot clip, firing a slot, duplicating a slot, or checking slot state (has clip / stop button): include CLIP_SLOT (and TRACK if the request also references track-level context).\n"
         "- If it's about editing/launching a SPECIFIC individual clip's content/loop/notes/properties (requires knowing which clip): include CLIP.\n"
         "- If it's about triggering/managing scenes: include SCENE (and SONG if transport context is implicated).\n"
         "- If it's about devices or their parameters: include DEVICE (and TRACK if scoped to a track).\n"
@@ -91,9 +91,11 @@ def _instruction_for_category(category: str | APICategory) -> str:
         APICategory.APPLICATION.name: (
             "\nAPPLICATION API category\n"
             "Category focus:\n"
-            "- Live application lifecycle and environment (startup, errors, logs).\n"
-            "- Application metadata (e.g., Live version).\n"
-            "Examples: 'show the last error in the log', 'what Live version is running', 'check if Live is running', 'show application status'."
+            "- Connectivity diagnostics: run /live/test to confirm AbletonOSC is responding.\n"
+            "- Application metadata: retrieve Ableton Live version (major/minor).\n"
+            "- AbletonOSC server configuration: get/set log level, reload the API server (development only).\n"
+            "- Typically used for status/health checks rather than musical operations.\n"
+            "Examples: 'run a connection test', 'what log level is AbletonOSC using', 'set the log level to debug', 'reload the AbletonOSC server', 'what Live version is running'."
         ),
         APICategory.SONG.name: (
             "\nSONG API category\n"
@@ -111,9 +113,11 @@ def _instruction_for_category(category: str | APICategory) -> str:
         APICategory.VIEW.name: (
             "\nVIEW API category\n"
             "Category focus:\n"
-            "- UI selection/navigation: get/set selected track, scene, clip, device.\n"
-            "- Start/stop listening to selected items or change what is selected.\n"
-            "Examples: 'select the next scene', 'focus the selected clip', 'what's currently selected', 'show selected track'."
+            "- Selection queries: current selected track, scene, clip (track & scene indices), selected device (track & device indices).\n"
+            "- Selection control: set the selected track/scene/clip/device by index.\n"
+            "- Listening: start/stop listening for selection changes (track or scene).\n"
+            "- VIEW is about UI focus/navigation; follow-up edits use TRACK/CLIP/DEVICE/SCENE APIs.\n"
+            "Examples: 'show the selected track number', 'set the selected scene to scene 2', 'select clip track 1 slot 3', 'focus device 0 on track 2', 'start listening to selected track changes'."
         ),
         APICategory.TRACK.name: (
             "\nTRACK API category\n"
@@ -132,8 +136,12 @@ def _instruction_for_category(category: str | APICategory) -> str:
         APICategory.CLIP_SLOT.name: (
             "\nCLIP_SLOT API category\n"
             "Category focus:\n"
-            "- Slot container operations: create/delete a clip in a slot, check slot has clip, duplicate to another slot, fire a slot.\n"
-            "Examples: 'create a new clip in track 2, slot 1', 'does slot 3 have a clip', 'show all clip slots', 'what clips are in track 1'."
+            "- Slot actions: fire play/pause of a specific clip slot.\n"
+            "- Slot creation/deletion: create_clip (requires length in beats), delete_clip.\n"
+            "- Slot state: has_clip, has_stop_button (query and set).\n"
+            "- Slot duplication: duplicate a clip from one slot to another target track/slot.\n"
+            "- Slot management is per track/slot index (both 0-based).\n"
+            "Examples: 'create an empty 4 bar clip in track 2 slot 1', 'fire slot 0 on track 1', 'enable the stop button on track 0 slot 3', 'duplicate the clip from track 0 slot 1 to track 2 slot 0', 'does slot 5 on track 1 have a clip?'."
         ),
         APICategory.CLIP.name: (
             "\nCLIP API category\n"
@@ -197,4 +205,3 @@ async def extract_user_request(
 
 
 __all__ = ["classify_user_input", "extract_user_request", "APICategory"]
-

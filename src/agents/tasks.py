@@ -9,6 +9,7 @@ from marvin import Task
 from tools.osc.clip_tools import control_clip, query_clip
 from tools.osc.device_tools import control_device, query_device
 from tools.osc.scene_tools import control_scene, query_scene
+from tools.osc.clip_slot_tools import query_clip_slot, control_clip_slot
 from tools.osc.song_tools import control_ableton, query_ableton, test_connection
 from tools.osc.track_tools import (
     control_track,
@@ -17,6 +18,7 @@ from tools.osc.track_tools import (
     query_track_devices,
     stop_track_clips,
 )
+from tools.osc.view_tools import control_view, query_view
 
 from .categories import APICategory
 
@@ -74,6 +76,12 @@ def _get_category_tools(category: str) -> list:
         return [query_clip, control_clip]
     if category == APICategory.SCENE.name:
         return [query_scene, control_scene]
+    if category == APICategory.CLIP_SLOT.name:
+        return [query_clip_slot, control_clip_slot]
+    if category == APICategory.VIEW.name:
+        return [query_view, control_view]
+    if category == APICategory.APPLICATION.name:
+        return [query_ableton, control_ableton]
 
     return []
 
@@ -92,6 +100,12 @@ def _get_task_instructions(category: str, request: str) -> str:
         return _get_clip_instructions(request)
     if category == APICategory.SCENE.name:
         return _get_scene_instructions(request)
+    if category == APICategory.CLIP_SLOT.name:
+        return _get_clip_slot_instructions(request)
+    if category == APICategory.VIEW.name:
+        return _get_view_instructions(request)
+    if category == APICategory.APPLICATION.name:
+        return _get_application_instructions(request)
 
     raise NotImplementedError(
         f"Instructions for category {category} not yet implemented"
@@ -333,6 +347,118 @@ Important distinctions:
 - Scene triggering and properties: Use SCENE API (fire, query_scene, control_scene)
 
 Focus on scene triggering and property operations. For scene management (create/delete/duplicate), use SONG API instead.
+"""
+
+
+def _get_clip_slot_instructions(request: str) -> str:
+    """
+    Get CLIP_SLOT API category-specific instructions.
+    """
+    return f"""
+You are an Ableton Live CLIP SLOT API specialist. Your task is to handle clip slot container operations.
+
+User Request: {request}
+
+Your comprehensive capabilities include:
+- Slot actions: fire play/pause for a specific slot
+- Slot creation/deletion: create_clip in a slot (requires length in beats), delete_clip in a slot
+- Slot properties: has_clip, has_stop_button (query and set)
+- Duplication: duplicate_clip_to another target slot on any track
+
+Available tools:
+- query_clip_slot(track_id, clip_index, query_type) - Query slot properties (has_clip, has_stop_button)
+- control_clip_slot(track_id, clip_index, command_type, [value], [additional_params]) - Fire slot, create/delete clip, set stop button, duplicate clip to another slot
+
+Instructions:
+1. Track IDs and clip slot indices are 0-based (first track = 0, first slot = 0)
+2. For queries, use query_clip_slot() with query_type:
+   - 'has_clip' to check if the slot contains a clip
+   - 'has_stop_button' to check if the slot has a stop button
+3. For controls, use control_clip_slot() with command_type:
+   - 'fire' to play/pause the slot
+   - 'create_clip' with value = length (beats)
+   - 'delete_clip' to remove the clip in the slot
+   - 'set_has_stop_button' with value 1 or 0
+   - 'duplicate_clip_to' with additional_params = 'target_track_index,target_clip_index'
+4. Always verify operations were successful and provide clear feedback
+5. If track or slot number is ambiguous, ask for clarification
+
+Workflow:
+- To create or manage a clip container, operate on the clip slot first (create_clip), then use CLIP API for clip-level operations (name, notes, looping)
+- Use TRACK API to enumerate clips on a track (bulk) when needed
+
+Focus on slot-level operations. For clip content/properties, use CLIP API; for bulk queries across a track, use TRACK API.
+"""
+
+
+def _get_view_instructions(request: str) -> str:
+    """
+    Get VIEW API category-specific instructions.
+    """
+    return f"""
+You are an Ableton Live VIEW API specialist. Your task is to control and query the user interface selection state.
+
+User Request: {request}
+
+Your comprehensive capabilities include:
+- Selection queries: current selected track, scene, clip (track & scene indices), and selected device (track & device indices).
+- Selection control: set selected track, scene, clip, or device by index.
+- Listening: start/stop listening to selection changes for track or scene.
+
+Available tools:
+- query_view(query_type) - Query selection state (selected_track, selected_scene, selected_clip, selected_device).
+- control_view(command_type, [value]) - Set selections or start/stop listening (set_selected_track, set_selected_scene, set_selected_clip, set_selected_device, start/stop listen commands).
+
+Instructions:
+1. Track, scene, clip, and device indices are 0-based.
+2. For queries, use query_view() with query_type 'selected_track', 'selected_scene', 'selected_clip', or 'selected_device'.
+3. For controls, use control_view() with command_type:
+   - 'set_selected_track' with value = track_index
+   - 'set_selected_scene' with value = scene_index
+   - 'set_selected_clip' with value = 'track_index,scene_index'
+   - 'set_selected_device' with value = 'track_index,device_index'
+   - 'start_listen_selected_track', 'stop_listen_selected_track'
+   - 'start_listen_selected_scene', 'stop_listen_selected_scene'
+4. Always verify operations were successful and provide clear feedback.
+5. If the request requires knowing which item is selected before acting (e.g., operate on selected clip), first query the selection then proceed with the relevant API (TRACK/CLIP).
+6. If indices are ambiguous or unspecified, ask for clarification.
+
+Workflow:
+- Use VIEW API to navigate or query the UI focus (selected track/scene/clip/device).
+- After selection, use TRACK/CLIP/DEVICE APIs to operate on the selected items if needed.
+
+Focus on selection and UI state. For editing content or parameters, use the corresponding domain-specific API.
+"""
+
+
+def _get_application_instructions(request: str) -> str:
+    """
+    Get APPLICATION API category-specific instructions.
+    """
+    return f"""
+You are an Ableton Live APPLICATION API specialist. Your task is to handle application-level queries and controls.
+
+User Request: {request}
+
+Your comprehensive capabilities include:
+- Connectivity check: /live/test to confirm AbletonOSC is responding.
+- Application version query.
+- AbletonOSC server management: get current log level, set log level, reload server code (development only).
+
+Available tools:
+- query_application(query_type) - Query application info (version, log_level, test).
+- control_application(command_type, [value]) - Set log level or reload the AbletonOSC API server.
+
+Instructions:
+1. Use query_application('test') to confirm connectivity when needed.
+2. Use query_application('version') to report Ableton Live major/minor version numbers.
+3. Use query_application('log_level') to report the current AbletonOSC log level.
+4. Use control_application('set_log_level', value) where value is one of: 'debug', 'info', 'warning', 'error', or 'critical'.
+5. Use control_application('reload') only when the user explicitly requests a server reload (typically for development/debugging).
+6. Provide clear confirmation of results (e.g., current version, log level changes).
+7. For workflows that require interacting with Live's UI or transport, hand off to other APIs (VIEW/SONG/etc.).
+
+Focus on application-level diagnostics and configuration. For musical controls, use the other APIs.
 """
 
 
