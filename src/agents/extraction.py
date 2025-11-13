@@ -2,11 +2,40 @@
 Extraction helpers for Ableton agent requests.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import marvin
 
 from .categories import APICategory
+
+
+def _flatten_list(items: Any) -> List[str]:
+    """
+    Flatten a potentially nested list structure into a flat list of strings.
+    Handles cases like: ['item'], [['item']], [[['item']]], etc.
+    """
+    result = []
+    if items is None:
+        return result
+
+    if isinstance(items, str):
+        return [items] if items.strip() else []
+
+    if isinstance(items, list):
+        for item in items:
+            if isinstance(item, str):
+                if item.strip():
+                    result.append(item)
+            elif isinstance(item, list):
+                # Recursively flatten nested lists
+                result.extend(_flatten_list(item))
+            elif item is not None:
+                # Convert other types to string
+                str_item = str(item).strip()
+                if str_item:
+                    result.append(str_item)
+
+    return result
 
 
 def _instruction_for_category(category: str | APICategory) -> str:
@@ -22,105 +51,131 @@ def _instruction_for_category(category: str | APICategory) -> str:
         "Constraints:\n"
         "- Return exact substrings from the user's text. Do NOT paraphrase or infer.\n"
         "- If nothing clearly applies to this category, return an empty list.\n"
-        "- Include both ACTION requests (commands to do something) and STATUS requests (queries for information).\n\n"
-        "Disambiguation:\n"
+        "- Include both ACTION requests (commands to do something) and STATUS requests (queries for information).\n"
+        "- Include questions and statements that request information or actions.\n\n"
+        "Extraction Guidelines:\n"
+        "- Understand the semantic intent of the operations described in the category focus below.\n"
+        "- Extract any portion of the user's text that expresses operations matching those semantic concepts.\n"
+        "- Extract the complete phrase that expresses the intent, even if it contains multiple words.\n"
+        "- For multi-step requests, extract each relevant part separately.\n"
         "- Ignore unrelated filler or commentary that does not change the concrete request.\n"
-        "- Prefer the most specific spans that still read as self-contained instructions.\n\n"
+        "- Prefer the most specific spans that still read as self-contained instructions.\n"
+        "- Focus on what the user wants to accomplish, not on specific words or phrases.\n\n"
     )
 
     specifics = {
         APICategory.APPLICATION.name: (
             "\nAPPLICATION API category\n"
             "Category focus:\n"
-            "- Connectivity diagnostics: run /live/test to confirm AbletonOSC is responding.\n"
-            "- Application metadata: retrieve Ableton Live version (major/minor).\n"
-            "- AbletonOSC server configuration: get/set log level, reload the API server (development only).\n"
-            "- Typically used for status/health checks rather than musical operations.\n"
-            "Examples: 'run a connection test', 'what log level is AbletonOSC using', 'set the log level to debug', 'reload the AbletonOSC server', 'what Live version is running'."
+            "- Connectivity diagnostics: testing or checking if AbletonOSC is responding or connected.\n"
+            "- Application metadata: queries about Ableton Live version information.\n"
+            "- Server configuration: getting or setting log levels, reloading/restarting the API server.\n"
+            "- These are system-level operations, not musical/creative operations.\n"
+            "Extract any requests about connection status, Live version, log levels, or server management."
         ),
         APICategory.SONG.name: (
             "\nSONG API category\n"
             "Category focus:\n"
-            "- Global transport: play/stop/continue, tempo/tap_tempo, metronome, song position/length, time signature.\n"
-            "- Loop control: loop on/off, loop start/length, groove amount.\n"
-            "- Recording: session_record, arrangement_overdub, record_mode, capture_midi.\n"
-            "- Navigation: jump_by, jump_to_next/prev_cue, undo/redo, back_to_arranger.\n"
-            "- Track/scene management: create/delete/duplicate tracks/scenes, create_return_track.\n"
-            "- Quantization: clip_trigger_quantization, midi_recording_quantization.\n"
-            "- Punch/nudge: punch_in/out, nudge_down/up.\n"
-            "- Global controls: stop_all_clips, session_record_status.\n"
-            "Examples: 'start playback', 'set tempo to 123', 'enable loop from bar 4', 'start session recording', 'create new MIDI track', 'set metronome on', 'jump to next cue', 'undo last action', 'stop all clips'."
+            "- Global transport: starting/stopping/continuing playback, tempo changes, metronome, song position, time signature.\n"
+            "- Loop control: enabling/disabling loops, setting loop boundaries (start, length, bars/beats).\n"
+            "- Recording: starting/stopping session or arrangement recording, overdub modes, capturing MIDI.\n"
+            "- Navigation: jumping forward/backward, moving to cue points, undo/redo, switching to arrangement view.\n"
+            "- Track/scene management: creating, deleting, or duplicating tracks or scenes (global operations).\n"
+            "- Quantization: setting quantization for clip triggers or MIDI recording.\n"
+            "- Punch/nudge: punch in/out points, nudging song position.\n"
+            "- Global controls: stopping all clips, checking recording status.\n"
+            "Extract requests about global session state, transport, tempo, loops, recording, or track/scene creation/deletion."
         ),
         APICategory.VIEW.name: (
             "\nVIEW API category\n"
             "Category focus:\n"
-            "- Selection queries: current selected track, scene, clip (track & scene indices), selected device (track & device indices).\n"
-            "- Selection control: set the selected track/scene/clip/device by index.\n"
-            "- Listening: start/stop listening for selection changes (track or scene).\n"
-            "- VIEW is about UI focus/navigation; follow-up edits use TRACK/CLIP/DEVICE/SCENE APIs.\n"
-            "Examples: 'show the selected track number', 'set the selected scene to scene 2', 'select clip track 1 slot 3', 'focus device 0 on track 2', 'start listening to selected track changes'."
+            "- Selection queries: asking what track, scene, clip, or device is currently selected/focused in the UI.\n"
+            "- Selection control: changing which track, scene, clip, or device is selected/focused.\n"
+            "- Listening: starting or stopping monitoring of selection changes.\n"
+            "- VIEW is about UI focus and navigation only; actual edits to selected items use other APIs.\n"
+            "Extract requests about querying or changing what's selected in the interface, or listening to selection changes."
         ),
         APICategory.TRACK.name: (
             "\nTRACK API category\n"
             "Category focus:\n"
-            "- Per-track mix controls: arm/mute/solo, volume, panning, sends.\n"
-            "- Track properties: name, color/color_index, meters (output_meter_left/right/level).\n"
-            "- Routing: available and current input/output routing channels/types, monitoring state.\n"
-            "- Track state: can_be_armed, fired_slot_index, playing_slot_index, is_visible.\n"
-            "- Audio/MIDI capabilities: has_audio_input/output, has_midi_input/output.\n"
-            "- Group operations: fold_state, is_foldable, is_grouped.\n"
-            "- Device queries on track: num_devices, devices/name, devices/type, devices/class_name.\n"
-            "- Bulk clip queries on track: clips/name/length/color (session), arrangement_clips/name/length/start_time (gets ALL clips on track at once).\n"
-            "- Clip control on track: stop_all_clips.\n"
-            "Examples: 'mute track 2', 'set track 1 volume to -6 dB', 'arm the bass track', 'set track 3 pan left', 'show track 1 devices', 'get all clip names on track 0', 'what clips are on track 1', 'stop all clips on track 2', 'what is track 1 output level', 'set send A on track 2 to 0.5', 'show track routing options'."
+            "- Per-track mix controls: arming, muting, soloing, volume, panning, send levels.\n"
+            "- Track properties: name, color, audio meter levels.\n"
+            "- Track setup/configuration: setting up, configuring, or preparing a track (naming, coloring, setting initial properties).\n"
+            "- Routing: input/output routing channels/types, monitoring state.\n"
+            "- Track state queries: checking if track can be armed, which slots are playing, visibility.\n"
+            "- Audio/MIDI capabilities: checking what types of input/output a track supports.\n"
+            "- Group operations: fold state, grouping status.\n"
+            "- Device discovery: listing or querying devices on a track (bulk queries).\n"
+            "- Bulk clip queries: getting information about all clips on a track at once.\n"
+            "- Clip control: stopping all clips on a specific track.\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to configure, prepare, or set up properties of an existing track.\n"
+            "- Operations to control or query mix settings (arm, mute, solo, volume, pan, sends) for a specific track.\n"
+            "- Operations to query or modify track properties (name, color, meters, routing, state, capabilities).\n"
+            "- Operations to discover or list devices or clips on a track.\n"
+            "- Note: Track creation (making new tracks) is SONG API, but track setup/configuration is TRACK API."
         ),
         APICategory.CLIP_SLOT.name: (
             "\nCLIP_SLOT API category\n"
             "Category focus:\n"
-            "- Slot actions: fire play/pause of a specific clip slot.\n"
-            "- Slot creation/deletion: create_clip (requires length in beats), delete_clip.\n"
-            "- Slot state: has_clip, has_stop_button (query and set).\n"
-            "- Slot duplication: duplicate a clip from one slot to another target track/slot.\n"
-            "- Slot management is per track/slot index (both 0-based).\n"
-            "Examples: 'create an empty 4 bar clip in track 2 slot 1', 'fire slot 0 on track 1', 'enable the stop button on track 0 slot 3', 'duplicate the clip from track 0 slot 1 to track 2 slot 0', 'does slot 5 on track 1 have a clip?'."
+            "- Slot actions: firing/playing/pausing a clip slot.\n"
+            "- Slot creation/deletion: creating new empty clips in slots (with length specified in bars/beats), deleting clips from slots.\n"
+            "- Slot state: checking if a slot has a clip, managing stop buttons.\n"
+            "- Slot duplication: copying a clip from one slot to another (can be same or different track).\n"
+            "- Slot management operations work on specific track/slot positions, but natural language may omit explicit indices.\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to create new empty clips (the act of bringing a clip into existence, not editing an existing one).\n"
+            "- Operations to fire, launch, or play clip slots.\n"
+            "- Operations to duplicate clips between slots.\n"
+            "- Operations to delete clips from slots or manage slot state.\n"
+            "- Important: The intent to create a new clip should be extracted regardless of how it's phrased or whether track/slot numbers are specified."
         ),
         APICategory.CLIP.name: (
             "\nCLIP API category\n"
             "Category focus:\n"
-            "- Playback control: fire (launch), stop, duplicate_loop.\n"
-            "- Clip properties: name, color, gain, length, file_path.\n"
-            "- Clip type: is_audio_clip, is_midi_clip.\n"
-            "- Clip state: is_playing, is_recording, playing_position.\n"
-            "- Pitch control: pitch_coarse (semitones), pitch_fine (cents).\n"
-            "- Loop control: loop_start, loop_end (in beats).\n"
-            "- Markers: start_marker, end_marker (in beats).\n"
-            "- Warping: warping mode control.\n"
-            "- MIDI notes: get notes (with optional range: start_pitch, pitch_span, start_time, time_span), add notes (pitch, start_time, duration, velocity, mute), remove notes (with optional range, or all if no range).\n"
-            "- Requires knowing the specific clip (track_id AND clip_id).\n"
-            "Examples: 'loop clip 0 on track 1 from bar 5', 'add notes to clip 0 on track 0', 'launch clip 0 on track 1', 'show properties of clip 0 on track 0', 'is clip 0 on track 1 recording', 'what notes are in clip 0 on track 0', 'set the gain of clip 0 on track 1 to 0.8', 'transpose clip 0 on track 0 up by 2 semitones', 'set loop start of clip 0 on track 1 to 8 beats', 'remove all C4 notes from clip 0 on track 0'."
+            "- Playback control: launching, stopping, or duplicating loops of a specific clip.\n"
+            "- Clip properties: name, color, gain, length, file path.\n"
+            "- Clip type: checking if a clip is audio or MIDI.\n"
+            "- Clip state: checking if clip is playing, recording, or its current position.\n"
+            "- Pitch control: transposing clips (coarse semitones, fine cents).\n"
+            "- Loop control: setting loop start and end points (in beats).\n"
+            "- Markers: setting start and end markers (in beats).\n"
+            "- Warping: enabling/disabling or configuring warping mode.\n"
+            "- MIDI notes: querying notes (optionally with pitch/time ranges), adding notes, removing notes (optionally with ranges).\n"
+            "- Operations require identifying a specific clip (track and clip indices).\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to edit, query, or control properties of a specific individual clip that already exists.\n"
+            "- Operations to modify or inspect clip properties (name, color, gain, length, pitch, loops, markers, warping).\n"
+            "- Operations to work with MIDI notes within a clip (adding, removing, querying notes).\n"
+            "- Important distinction: Creating new clips is CLIP_SLOT API. Editing existing clips is CLIP API."
         ),
         APICategory.SCENE.name: (
             "\nSCENE API category\n"
             "Category focus:\n"
-            "- Scene triggering: fire (trigger specific scene), fire_as_selected (trigger scene and select next), fire_selected (trigger currently selected scene).\n"
-            "- Scene properties: name, color, color_index.\n"
-            "- Scene state: is_empty, is_triggered.\n"
-            "- Tempo control: tempo (BPM value), tempo_enabled (whether scene overrides global tempo).\n"
-            "- Time signature control: time_signature_numerator, time_signature_denominator, time_signature_enabled (whether scene overrides global time signature).\n"
-            "- Scenes trigger all clips in a row simultaneously when fired.\n"
+            "- Scene triggering: firing/launching/triggering scenes (specific scene, selected scene, or scene with selection advance).\n"
+            "- Scene properties: name, color.\n"
+            "- Scene state: checking if scene is empty or currently triggered.\n"
+            "- Tempo control: setting scene tempo (BPM) and enabling tempo override.\n"
+            "- Time signature control: setting scene time signature and enabling override.\n"
+            "- Scenes trigger all clips in their row simultaneously.\n"
             "- Note: Scene creation/deletion/duplication are SONG API operations, not SCENE API.\n"
-            "Examples: 'launch scene 3', 'fire scene 0', 'trigger the selected scene', 'what is the name of scene 1', 'set scene 2 tempo to 120 BPM', 'enable tempo override for scene 0', 'show all scene properties', 'is scene 1 empty', 'set scene 0 time signature to 7/8'."
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to trigger, fire, or launch scenes.\n"
+            "- Operations to set or query scene properties (name, color, tempo, time signature).\n"
+            "- Operations to query scene state (empty, triggered).\n"
         ),
         APICategory.DEVICE.name: (
             "\nDEVICE API category\n"
             "Category focus:\n"
-            "- Device identification: name (human-readable), class_name (Live instrument/effect name), type (1=audio_effect, 2=instrument, 4=midi_effect).\n"
-            "- Parameter queries: num_parameters, bulk parameter queries (names, values, min, max, is_quantized), individual parameter queries (value, value_string for human-readable format).\n"
-            "- Parameter control: set individual parameter values, set bulk parameter values.\n"
-            "- Parameter ranges: query min/max values for parameters, check if parameters are quantized.\n"
-            "- Human-readable values: parameter_value_string returns readable format (e.g., '2500 Hz' instead of raw numeric).\n"
-            "- When scoped to a specific track/device chain (requires track_id and device_id).\n"
-            "Examples: 'increase reverb dry/wet', 'set cutoff to 2 kHz on track 1', 'show all devices on track 1', 'what effects are loaded', 'list device parameters', 'what's the current value of the filter cutoff on device 0, track 1', 'set reverb dry/wet to 0.7', 'show parameter ranges for device 0 on track 0'."
+            "- Device identification: getting device names, types (audio effect, instrument, MIDI effect), class names.\n"
+            "- Parameter queries: listing parameters, getting parameter values (raw or human-readable), parameter ranges (min/max), quantization status.\n"
+            "- Parameter control: setting individual or multiple parameter values.\n"
+            "- Human-readable values: getting parameter values in readable formats (e.g., frequency in Hz, not raw numbers).\n"
+            "- Operations are scoped to a specific device on a specific track.\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to query or control device parameters (getting or setting parameter values).\n"
+            "- Operations to get device information (names, types, class names).\n"
+            "- Note: Listing devices on a track is TRACK API, but controlling device parameters is DEVICE API."
         ),
     }
 
@@ -139,8 +194,12 @@ async def extract_user_request(
 
     for category in categories:
         instructions = _instruction_for_category(category)
-        spans = await marvin.extract_async(user_input, str, instructions=instructions)
-        extracted_requests[category] = spans if isinstance(spans, list) else [spans]
+        spans = await marvin.extract_async(
+            user_input, List[str], instructions=instructions
+        )
+
+        # Flatten and filter the results to handle nested lists
+        extracted_requests[category] = _flatten_list(spans)
 
     return extracted_requests
 

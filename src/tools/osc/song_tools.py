@@ -161,8 +161,28 @@ def control_ableton(
         args.append(value)
     if additional_params:
         try:
-            args.extend([p.strip() for p in additional_params.split(",")])
-        except Exception:
+            # Commands that require integer parameters
+            int_param_commands = {
+                "create_scene",
+                "delete_scene",
+                "duplicate_scene",
+                "create_midi_track",
+                "create_audio_track",
+                "delete_track",
+                "duplicate_track",
+                "delete_return_track",
+            }
+
+            params = [p.strip() for p in additional_params.split(",")]
+
+            # Convert to integers for commands that require them
+            if command_type.lower() in int_param_commands:
+                args.extend([int(p) for p in params])
+            else:
+                args.extend(params)
+        except (ValueError, Exception) as e:
+            if isinstance(e, ValueError):
+                return f"Error: {command_type} requires integer parameters, but got: {additional_params}"
             args.append(additional_params)
 
     result = osc.send_and_wait(address, args if args else None, timeout=1.0)

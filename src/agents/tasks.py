@@ -19,6 +19,7 @@ from tools.osc.track_tools import (
     stop_track_clips,
 )
 from tools.osc.view_tools import control_view, query_view
+from tools.osc.application_tools import query_application, control_application
 
 from .categories import APICategory
 from .task_instructions import (
@@ -117,7 +118,7 @@ def get_category_tools(category: str) -> list:
     if category == APICategory.VIEW.name:
         return [query_view, control_view]
     if category == APICategory.APPLICATION.name:
-        return [query_ableton, control_ableton]
+        return [query_application, control_application]
 
     return []
 

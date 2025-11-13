@@ -12,7 +12,7 @@ from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
 
-OSC_AVAILABLE = False # Set to False to run in simulation mode
+OSC_AVAILABLE = True # Set to False to run in simulation mode
 
 
 class OSCResponse:
