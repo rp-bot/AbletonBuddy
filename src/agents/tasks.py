@@ -20,6 +20,11 @@ from tools.osc.track_tools import (
 )
 from tools.osc.view_tools import control_view, query_view
 from tools.osc.application_tools import query_application, control_application
+from tools.osc.composition_tools import (
+    create_melody_clip,
+    create_chord_progression_clip,
+    create_drum_pattern_clip,
+)
 
 from .categories import APICategory
 from .task_instructions import (
@@ -31,6 +36,7 @@ from .task_instructions import (
     get_song_instructions,
     get_track_instructions,
     get_view_instructions,
+    get_composition_instructions,
 )
 
 
@@ -87,6 +93,8 @@ def _get_task_instructions(category: str, request: str) -> str:
         return get_view_instructions(request)
     if category == APICategory.APPLICATION.name:
         return get_application_instructions(request)
+    if category == APICategory.COMPOSITION.name:
+        return get_composition_instructions(request)
 
     raise NotImplementedError(
         f"Instructions for category {category} not yet implemented"
@@ -119,6 +127,15 @@ def get_category_tools(category: str) -> list:
         return [query_view, control_view]
     if category == APICategory.APPLICATION.name:
         return [query_application, control_application]
+    if category == APICategory.COMPOSITION.name:
+        return [
+            create_melody_clip,
+            create_chord_progression_clip,
+            create_drum_pattern_clip,
+            # Include SONG API tools for track creation and queries
+            query_ableton,
+            control_ableton,
+        ]
 
     return []
 

@@ -27,8 +27,9 @@ class APICategory(Enum):
         "arm, device lists, meters and clip lists."
     )
     CLIP_SLOT = (
-        "Clip Slot API - Clip container operations: create/delete clips, query whether "
-        "a slot has a clip and manage clip slot state."
+        "Clip Slot API - Clip container operations: create/delete empty clips, query whether "
+        "a slot has a clip and manage clip slot state. Note: For creating clips with musical "
+        "content (melodies, chords, drums), use COMPOSITION API instead."
     )
     CLIP = (
         "Clip API - Individual clip control: clip playback, looping, notes, length, "
@@ -41,6 +42,10 @@ class APICategory(Enum):
     DEVICE = (
         "Device API - Instrument and effect control: device lists, device parameters, "
         "types and per-device property queries."
+    )
+    COMPOSITION = (
+        "Composition API - MIDI content generation: creating musically coherent melodies, "
+        "chord progressions, and drum patterns in MIDI clips."
     )
 
 

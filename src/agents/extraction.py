@@ -177,6 +177,23 @@ def _instruction_for_category(category: str | APICategory) -> str:
             "- Operations to get device information (names, types, class names).\n"
             "- Note: Listing devices on a track is TRACK API, but controlling device parameters is DEVICE API."
         ),
+        APICategory.COMPOSITION.name: (
+            "\nCOMPOSITION API category\n"
+            "Category focus:\n"
+            "- Melody generation: creating melodic lines with specified scale/key, length, and style.\n"
+            "- Chord progression generation: creating harmonically coherent chord progressions with specified parameters.\n"
+            "- Drum pattern generation: creating rhythmically interesting drum patterns for various musical styles.\n"
+            "- Musical content generation: requests to generate, create, or make musical content (melodies, chords, drums).\n"
+            "- Operations involve generating MIDI notes and creating clips with that content.\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to create or generate melodies (e.g., 'create a melody', 'generate a melodic line', 'make a melody').\n"
+            "- Operations to create or generate chord progressions (e.g., 'create a chord progression', 'generate chords', 'make a progression').\n"
+            "- Operations to create or generate drum patterns (e.g., 'create a drum pattern', 'generate drums', 'make a beat').\n"
+            "- Requests that specify musical parameters like scale/key, style, length in bars for content generation.\n"
+            "- Include track and slot information when specified (e.g., 'in track 2', 'on track 1 slot 0', 'in [track 2]').\n"
+            "- Extract the complete request including location context (e.g., 'create a hiphop melody 4 bars long in track 2' should extract the full phrase).\n"
+            "- Important: This is about GENERATING musical content, not just creating empty clips. Creating empty clips is CLIP_SLOT API."
+        ),
     }
 
     return base + specifics.get(category_name, "")
