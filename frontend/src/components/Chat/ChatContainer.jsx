@@ -13,14 +13,18 @@ import Avatar from "./Avatar";
 /**
  * Main chat container component
  */
-export default function ChatContainer({ threadId }) {
+export default function ChatContainer({ threadId, onTitleUpdate }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { isStreaming, statusMessage, streamingEvents, sendMessage, cancelStream } = useStreamingChat(threadId, (updateFn) => {
-    setMessages(updateFn);
-  });
+  const { isStreaming, statusMessage, streamingEvents, sendMessage, cancelStream } = useStreamingChat(
+    threadId,
+    (updateFn) => {
+      setMessages(updateFn);
+    },
+    onTitleUpdate
+  );
 
   useEffect(() => {
     if (threadId) {

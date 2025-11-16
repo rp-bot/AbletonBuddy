@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { FaEdit } from "react-icons/fa";
 import { listThreads, createThread, deleteThread } from "../api/client";
 
 /**
  * Thread list component for sidebar
  */
-export default function ThreadList({ onThreadSelect, currentThreadId }) {
+const ThreadList = forwardRef(function ThreadList({ onThreadSelect, currentThreadId }, ref) {
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,6 +27,11 @@ export default function ThreadList({ onThreadSelect, currentThreadId }) {
       setLoading(false);
     }
   };
+
+  // Expose loadThreads function to parent via ref
+  useImperativeHandle(ref, () => ({
+    refresh: loadThreads,
+  }));
 
   const handleCreateThread = async () => {
     try {
@@ -164,4 +169,6 @@ export default function ThreadList({ onThreadSelect, currentThreadId }) {
       </div>
     </div>
   );
-}
+});
+
+export default ThreadList;

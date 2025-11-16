@@ -5,8 +5,9 @@ import { streamMessage, cancelStream } from "../api/client";
  * Custom hook for managing streaming chat functionality
  * @param {string} threadId - Current thread ID
  * @param {Function} onMessageUpdate - Callback when messages are updated (for adding new messages)
+ * @param {Function} onTitleUpdate - Optional callback when thread title is updated
  */
-export function useStreamingChat(threadId, onMessageUpdate) {
+export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [streamingEvents, setStreamingEvents] = useState([]);
@@ -168,6 +169,13 @@ export function useStreamingChat(threadId, onMessageUpdate) {
           );
           // Clear accumulated steps after updating the message
           setAccumulatedAgentSteps([]);
+        }
+        break;
+
+      case "title":
+        // Title was updated - notify parent to refresh thread list
+        if (onTitleUpdate) {
+          onTitleUpdate(data);
         }
         break;
 

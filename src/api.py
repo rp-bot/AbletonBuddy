@@ -34,6 +34,7 @@ from agents import (
     extract_user_request,
     create_and_execute_tasks,
     summarize_thread,
+    generate_conversation_title,
 )
 
 # Import message formatting utilities
@@ -144,9 +145,10 @@ async def list_threads():
                 # Fallback to stored count if calculation fails
                 actual_message_count = thread.message_count
 
-            # Use first_message_preview as summary, or fallback to message count
+            # Prioritize title, then first_message_preview, then fallback to message count
             summary = (
-                thread.first_message_preview
+                thread.title
+                or thread.first_message_preview
                 or f"Thread with {actual_message_count} messages"
             )
 
@@ -357,6 +359,18 @@ async def process_agent_pipeline(
                 message_count=message_count,
                 last_message=clarification_message,
             )
+            
+            # Generate title after first message exchange (message_count == 2)
+            if message_count == 2:
+                try:
+                    generated_title = await generate_conversation_title(thread)
+                    await update_thread_metadata(thread_id, title=generated_title)
+                    # Send title update event to frontend
+                    await event_queue.put({"event": "title", "data": generated_title})
+                except Exception:
+                    # If title generation fails, continue without title
+                    pass
+            
             await event_queue.put({"event": "assistant", "data": clarification_message})
             await event_queue.put({"event": "done", "data": "Need clarification"})
             return
@@ -475,6 +489,18 @@ async def process_agent_pipeline(
         await update_thread_metadata(
             thread_id, message_count=message_count, last_message=summarized_results
         )
+        
+        # Generate title after first message exchange (message_count == 2)
+        if message_count == 2:
+            try:
+                generated_title = await generate_conversation_title(thread)
+                await update_thread_metadata(thread_id, title=generated_title)
+                # Send title update event to frontend
+                await event_queue.put({"event": "title", "data": generated_title})
+            except Exception:
+                # If title generation fails, continue without title
+                pass
+        
         await event_queue.put({"event": "done", "data": "Complete"})
 
     except asyncio.CancelledError:
@@ -502,6 +528,17 @@ async def process_agent_pipeline(
             await update_thread_metadata(
                 thread_id, message_count=message_count, last_message=cancelled_message
             )
+            
+            # Generate title after first message exchange (message_count == 2)
+            if message_count == 2:
+                try:
+                    generated_title = await generate_conversation_title(thread)
+                    await update_thread_metadata(thread_id, title=generated_title)
+                    # Send title update event to frontend
+                    await event_queue.put({"event": "title", "data": generated_title})
+                except Exception:
+                    # If title generation fails, continue without title
+                    pass
         except Exception:
             pass  # Thread might not exist or be accessible
         raise  # Re-raise to properly handle cancellation

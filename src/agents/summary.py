@@ -30,5 +30,36 @@ async def summarize_thread(thread: marvin.Thread) -> str:
     return summary
 
 
-__all__ = ["summarize_thread"]
+async def generate_conversation_title(thread: marvin.Thread) -> str:
+    """
+    Generate a concise title for a conversation thread.
+    
+    Args:
+        thread: A Marvin thread object
+        
+    Returns:
+        str: A short, concise title (50-60 characters max) describing the main topic/request
+    """
+    thread_messages = thread.get_messages()
+
+    instructions = (
+        "Generate a short, concise title for this conversation. "
+        "The title should capture the main topic or request from the user. "
+        "Keep it to 50-60 characters maximum. "
+        "Use clear, simple language without technical jargon. "
+        "Focus on what the user asked for or what the conversation is about. "
+        "Do not include punctuation at the end unless necessary. "
+        "Examples: 'Create new track', 'Adjust volume levels', 'Set up MIDI device'"
+    )
+
+    title = await marvin.summarize_async(thread_messages, instructions=instructions)
+    
+    # Ensure title is within character limit
+    if len(title) > 60:
+        title = title[:57] + "..."
+    
+    return title.strip()
+
+
+__all__ = ["summarize_thread", "generate_conversation_title"]
 

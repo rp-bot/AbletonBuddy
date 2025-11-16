@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ThreadList from "../ThreadList";
 import ChatContainer from "../Chat/ChatContainer";
@@ -10,6 +10,7 @@ export default function AppLayout() {
   const [currentThreadId, setCurrentThreadId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const threadListRef = useRef(null);
 
   // Extract threadId from URL
   useEffect(() => {
@@ -37,14 +38,26 @@ export default function AppLayout() {
         </div>
 
         <div className="flex-1 overflow-hidden">
-          <ThreadList onThreadSelect={handleThreadSelect} currentThreadId={currentThreadId} />
+          <ThreadList
+            ref={threadListRef}
+            onThreadSelect={handleThreadSelect}
+            currentThreadId={currentThreadId}
+          />
         </div>
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {currentThreadId ? (
-          <ChatContainer threadId={currentThreadId} />
+          <ChatContainer
+            threadId={currentThreadId}
+            onTitleUpdate={() => {
+              // Refresh thread list when title is updated
+              if (threadListRef.current?.refresh) {
+                threadListRef.current.refresh();
+              }
+            }}
+          />
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
