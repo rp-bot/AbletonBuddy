@@ -10,6 +10,7 @@ import { streamMessage, cancelStream } from "../api/client";
 export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [currentAgentMessage, setCurrentAgentMessage] = useState("");
   const [streamingEvents, setStreamingEvents] = useState([]);
   const [accumulatedAgentSteps, setAccumulatedAgentSteps] = useState([]);
   const abortControllerRef = useRef(null);
@@ -31,6 +32,7 @@ export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
 
       setIsStreaming(true);
       setStatusMessage("Processing your request...");
+      setCurrentAgentMessage("");
       setStreamingEvents([]);
       setAccumulatedAgentSteps([]);
 
@@ -57,6 +59,7 @@ export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
       } finally {
         setIsStreaming(false);
         setStatusMessage("");
+        setCurrentAgentMessage("");
         setStreamingEvents([]);
         abortControllerRef.current = null;
         streamAbortRef.current = null;
@@ -119,14 +122,65 @@ export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
 
       case "disambiguation":
         setStatusMessage("Clarifying your request...");
+        // Display the actual disambiguation agent output
+        setCurrentAgentMessage(data);
+        // Update message content in real-time
+        if (onMessageUpdate && placeholderId) {
+          onMessageUpdate((prevMessages) =>
+            prevMessages.map((msg) => {
+              if (msg.id === placeholderId) {
+                return {
+                  ...msg,
+                  content: data, // Show the agent message
+                  isStreaming: true,
+                };
+              }
+              return msg;
+            }),
+          );
+        }
         break;
 
       case "classification":
         setStatusMessage("Classifying operations...");
+        // Display the actual classification agent output
+        setCurrentAgentMessage(data);
+        // Update message content in real-time
+        if (onMessageUpdate && placeholderId) {
+          onMessageUpdate((prevMessages) =>
+            prevMessages.map((msg) => {
+              if (msg.id === placeholderId) {
+                return {
+                  ...msg,
+                  content: data, // Show the agent message
+                  isStreaming: true,
+                };
+              }
+              return msg;
+            }),
+          );
+        }
         break;
 
       case "extraction":
         setStatusMessage("Extracting details...");
+        // Display the actual extraction agent output
+        setCurrentAgentMessage(data);
+        // Update message content in real-time
+        if (onMessageUpdate && placeholderId) {
+          onMessageUpdate((prevMessages) =>
+            prevMessages.map((msg) => {
+              if (msg.id === placeholderId) {
+                return {
+                  ...msg,
+                  content: data, // Show the agent message
+                  isStreaming: true,
+                };
+              }
+              return msg;
+            }),
+          );
+        }
         break;
 
       case "task_success":
@@ -376,6 +430,7 @@ export function useStreamingChat(threadId, onMessageUpdate, onTitleUpdate) {
   return {
     isStreaming,
     statusMessage,
+    currentAgentMessage,
     streamingEvents,
     sendMessage,
     cancelStream: cancelCurrentStream,
