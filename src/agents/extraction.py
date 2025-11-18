@@ -177,6 +177,19 @@ def _instruction_for_category(category: str | APICategory) -> str:
             "- Operations to get device information (names, types, class names).\n"
             "- Note: Listing devices on a track is TRACK API, but controlling device parameters is DEVICE API."
         ),
+        APICategory.DEVICE_LOADER.name: (
+            "\nDEVICE_LOADER API category\n"
+            "Category focus:\n"
+            "- Searching Ableton's browser for devices, instruments, effects, sounds, drums, or plugins by name/type.\n"
+            "- Loading/adding a device onto the currently selected track or a specific track mentioned in the request.\n"
+            "- Managing the Device Loader cache: rebuilding it, checking cache size, running test loads.\n"
+            "- Requests often mention a device name (\"Operator\", \"analog pad sound\") plus optional track context (\"on track 3\", \"onto the bass track\").\n"
+            "Extract any portion of the user's request that expresses:\n"
+            "- Operations to search for devices by name/category within Ableton's browser.\n"
+            "- Operations to load/add devices onto a track (include the track context within the extracted span).\n"
+            "- Operations to rebuild or inspect the Device Loader cache, including cache size or test load.\n"
+            "- When the user mentions a target track, include that part of the sentence so the Device Loader agent can perform VIEW selection."
+        ),
         APICategory.COMPOSITION.name: (
             "\nCOMPOSITION API category\n"
             "Category focus:\n"

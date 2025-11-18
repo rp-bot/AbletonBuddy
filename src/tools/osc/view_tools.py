@@ -110,4 +110,22 @@ def control_view(
     return f"Command {command_type} result: {result}"
 
 
-__all__ = ["query_view", "control_view"]
+def select_track(
+    track_index: Annotated[
+        int, Field(description="Track index (0-based) to become the selected track.")
+    ]
+) -> str:
+    """
+    Convenience helper for selecting a track without manually specifying command strings.
+    """
+
+    osc = OSCClient()
+    result = osc.send_and_wait(
+        "/live/view/set/selected_track", [track_index], timeout=1.0
+    )
+    if result is None or result == "OK":
+        return f"Selected track {track_index}"
+    return f"Select track {track_index} result: {result}"
+
+
+__all__ = ["query_view", "control_view", "select_track"]
