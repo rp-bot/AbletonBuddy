@@ -1,0 +1,35 @@
+% move all configuration stuff into one file so we can focus on the content
+\input{shared/common.tex}
+\input{shared/beamersetup.tex}
+\include{shared/definitions.tex}
+
+
+% \usepackage{siunitx}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% title information
+\title[]{AbletonBuddy: An AI-Powered Assistant for Ableton Live Control}   
+\author{Pratham Vadhulas \\ Advisor: Dr. Alexander Lerch}
+\date{Fall 2025 Project Proposal}
+
+
+
+\newcommand{\T}{\mathsf{T}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+    % generate title page
+    \input{shared/titlepage.tex}
+
+    \input{sections/01-introduction}
+    \input{sections/02-motivation}
+    \input{sections/03-methodology}
+    \input{sections/04-evaluation}
+    \input{sections/05-results}
+
+    \setbeamertemplate{frametitle continuation}{}
+    \begin{frame}[allowframebreaks]{references}
+        \renewcommand*{\bibfont}{\tiny}
+        \printbibliography[title=references]
+    \end{frame}
+\end{document}

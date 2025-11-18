@@ -1,0 +1,92 @@
+\section{Methodology}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{System Architecture}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{0.6\textwidth}
+\begin{itemize}
+    \item<1-> \textbf{LLM Backbone}: Uses pre-trained language models (e.g., Claude, GPT-4) via Marvin framework
+    \item<2-> \textbf{Agent-Based Design}: Multi-agent system with specialized agents for different tasks
+    \item<3-> \textbf{OSC Communication}: Open Sound Control protocol for real-time DAW control
+    \item<4-> \textbf{Modular Tools}: Extensible tool system for different Ableton Live operations
+    \item<5-> \textbf{Conversation Management}: Thread-based persistence with SQLite database
+\end{itemize}
+
+\column{0.4\textwidth}
+\centering
+% Placeholder for architecture diagram
+\only<1>{\textcolor{gray}{[System Architecture Diagram]}}
+\only<2>{\textcolor{gray}{[Agent Structure]}}
+\only<3>{\textcolor{gray}{[OSC Layer]}}
+\only<4>{\textcolor{gray}{[Tool System]}}
+\only<5>{\textcolor{gray}{[Database Schema]}}
+\end{columns}
+\end{frame}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{Agent Pipeline}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{0.55\textwidth}
+\begin{enumerate}
+    \item<1-> \textbf{Input Classification}: Categorize user request (track, clip, device, etc.)
+    \item<2-> \textbf{Disambiguation}: Resolve ambiguous references (e.g., "the first track")
+    \item<3-> \textbf{Extraction}: Extract structured parameters from natural language
+    \item<4-> \textbf{Task Creation}: Generate executable tasks with specific instructions
+    \item<5-> \textbf{Execution}: Execute tasks via OSC commands to Ableton Live
+\end{enumerate}
+
+\column{0.45\textwidth}
+\centering
+% Placeholder for pipeline diagram
+\only<1>{\textcolor{gray}{[Classification Agent]}}
+\only<2>{\textcolor{gray}{[Disambiguation Agent]}}
+\only<3>{\textcolor{gray}{[Extraction Agent]}}
+\only<4>{\textcolor{gray}{[Task Agent]}}
+\only<5>{\textcolor{gray}{[Execution Flow]}}
+\end{columns}
+\end{frame}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{Key Components}
+\begin{itemize}
+    \item<1-> \textbf{Classification Agent}: Determines request category (song, track, clip, device, etc.)
+    \item<2-> \textbf{Disambiguation Agent}: Resolves ambiguous references using context
+    \item<3-> \textbf{Extraction Agent}: Extracts structured data from natural language
+    \item<4-> \textbf{Task Agent}: Creates and executes sequences of operations
+    \item<5-> \textbf{OSC Tools}: Modular tools for each Ableton Live operation type
+    \item<6-> \textbf{Message Formatting}: Filters and formats agent messages for display
+\end{itemize}
+\end{frame}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{Supported Operations}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{0.5\textwidth}
+\textbf{Song Control}
+\begin{itemize}
+    \item Playback (play, stop, pause)
+    \item Tempo and time signature
+    \item Metronome control
+    \item Session recording
+\end{itemize}
+
+\textbf{Track Management}
+\begin{itemize}
+    \item Create/delete tracks
+    \item Track naming and routing
+    \item Volume and pan control
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Clip Operations}
+\begin{itemize}
+    \item Create/delete clips
+    \item Clip slot management
+    \item Launch and stop clips
+\end{itemize}
+
+\textbf{Device Control}
+\begin{itemize}
+    \item Add/remove devices
+    \item Parameter adjustment
+    \item Device management
+\end{itemize}
+\end{columns}
+\end{frame}
+

@@ -1,0 +1,45 @@
+\section{Automatic Mixing Review}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{Rule-Based \& Deep Learning Approaches}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{0.58\textwidth}
+\textbf{Rule-Based and Traditional Machine Learning Systems}
+\begin{itemize}
+    \item<1-> Knowledge-engineered autonomous mixing \cite{Perez-Gonzalez_Reiss_2013}
+    \item<2-> A machine-learning approach for instrument-specific application of artificial reverberation. \cite{Chourdakis_Reiss_2017}
+\end{itemize}
+
+\medskip
+
+\textbf{Deep Learning Architectures}
+\begin{itemize}
+    \item<3-> Wave-U-Net autoencoders for automatic mixing \cite{waveunet}
+    \item<4-> Differentiable mixing console with neural effects \cite{Steinmetz_Pons_Pascual_Serra_2020}
+\end{itemize}
+
+\column{0.42\textwidth}
+\centering
+\only<1>{\includegraphics[height=0.7\textheight,keepaspectratio]{pictures/rule-based.png}}
+\only<2>{\includegraphics[height=0.7\textheight,keepaspectratio]{pictures/ml-mixing-reverb.png}}
+\only<3>{\includegraphics[height=0.6\textheight,keepaspectratio]{pictures/mixwaveunet.png}}
+\only<4->{\begin{minipage}[c][0.7\textheight][c]{\linewidth}\centering\includegraphics[height=0.25\textheight,keepaspectratio]{pictures/DMC-A.png}\end{minipage}}
+\end{columns}
+\end{frame}
+
+\begin{frame}\frametitle{\secname}\framesubtitle{Semantic Approaches}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{0.58\textwidth}
+\textbf{Language-Audio Integration}
+\begin{itemize}
+    \item<1-> Word-embedding approaches linking language and audio for audio effect parameter recommendations \cite{Chu_OReilly_Barnett_Pardo_2025, Venkatesh_Moffat_Miranda_2022, semantic-mixing}
+    \item<2-> Prompt-driven interfaces mapping natural language to mixing tasks \cite{Doh_Koo_Martinez-Ramirez_Liao_Nam_Mitsufuji_2025, Melechovsky_Mehrish_Herremans_2025, Clemens_Marasovic_2025}
+\end{itemize}
+
+\column{0.42\textwidth}
+\centering
+\only<1>{\begin{minipage}[c][0.7\textheight][c]{\linewidth}\centering\includegraphics[width=\linewidth,height=0.5\textheight,keepaspectratio]{pictures/semantic-eq.png}\end{minipage}}
+\only<2->{\includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{pictures/image.png}}
+\end{columns}
+\end{frame}
+
+
