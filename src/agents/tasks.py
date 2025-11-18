@@ -8,6 +8,13 @@ from marvin import Task
 
 from tools.osc.clip_tools import control_clip, query_clip
 from tools.osc.device_tools import control_device, query_device
+from tools.osc.device_loader_tools import (
+    load_device,
+    search_device,
+    rebuild_device_cache,
+    get_device_cache_size,
+    test_load_device,
+)
 from tools.osc.scene_tools import control_scene, query_scene
 from tools.osc.clip_slot_tools import query_clip_slot, control_clip_slot
 from tools.osc.song_tools import control_ableton, query_ableton, test_connection
@@ -18,7 +25,7 @@ from tools.osc.track_tools import (
     query_track_devices,
     stop_track_clips,
 )
-from tools.osc.view_tools import control_view, query_view
+from tools.osc.view_tools import control_view, query_view, select_track
 from tools.osc.application_tools import query_application, control_application
 from tools.osc.composition_tools import (
     create_melody_clip,
@@ -32,6 +39,7 @@ from .task_instructions import (
     get_clip_instructions,
     get_clip_slot_instructions,
     get_device_instructions,
+    get_device_loader_instructions,
     get_scene_instructions,
     get_song_instructions,
     get_track_instructions,
@@ -95,6 +103,8 @@ def _get_task_instructions(category: str, request: str) -> str:
         return get_application_instructions(request)
     if category == APICategory.COMPOSITION.name:
         return get_composition_instructions(request)
+    if category == APICategory.DEVICE_LOADER.name:
+        return get_device_loader_instructions(request)
 
     raise NotImplementedError(
         f"Instructions for category {category} not yet implemented"
@@ -124,7 +134,7 @@ def get_category_tools(category: str) -> list:
     if category == APICategory.CLIP_SLOT.name:
         return [query_clip_slot, control_clip_slot]
     if category == APICategory.VIEW.name:
-        return [query_view, control_view]
+        return [query_view, control_view, select_track]
     if category == APICategory.APPLICATION.name:
         return [query_application, control_application]
     if category == APICategory.COMPOSITION.name:
@@ -135,6 +145,17 @@ def get_category_tools(category: str) -> list:
             # Include SONG API tools for track creation and queries
             query_ableton,
             control_ableton,
+        ]
+    if category == APICategory.DEVICE_LOADER.name:
+        return [
+            load_device,
+            search_device,
+            rebuild_device_cache,
+            get_device_cache_size,
+            test_load_device,
+            query_view,
+            control_view,
+            select_track,
         ]
 
     return []

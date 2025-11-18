@@ -43,6 +43,11 @@ class APICategory(Enum):
         "Device API - Instrument and effect control: device lists, device parameters, "
         "types and per-device property queries."
     )
+    DEVICE_LOADER = (
+        "Device Loader API - Browser-powered search and loading of instruments/effects/"
+        "sounds onto the selected track, plus cache management (search, load, rebuild "
+        "cache, cache size, test load). Often combined with VIEW to pick the target track."
+    )
     COMPOSITION = (
         "Composition API - MIDI content generation: creating musically coherent melodies, "
         "chord progressions, and drum patterns in MIDI clips."
