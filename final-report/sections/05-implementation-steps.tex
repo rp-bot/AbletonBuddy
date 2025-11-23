@@ -1,0 +1,36 @@
+\section{Implementation Steps}
+\label{sec:implementation-steps}
+
+The development of the system followed an iterative, incremental methodology. We began with a minimal viable command-line architecture to validate the core logic before progressively expanding into a full-stack application with a multi-agent swarm. This process was divided into five distinct phases.
+
+\subsection{Phase 1: Core Architecture \& Agent Framework}
+
+The initial phase focused on establishing the foundational logic without the overhead of web protocols. We developed the core orchestration framework, which included the bi-directional Open Sound Control (OSC) layer for communicating with Ableton Live and the memory management system.
+
+During this stage, the primary multi-stage pipeline---\textit{Disambiguation $\rightarrow$ Classification $\rightarrow$ Extraction $\rightarrow$ Execution $\rightarrow$ Summarization}---was implemented and validated using a single ``Song Agent.'' This isolated environment allowed us to perfect the conversation management (creation, resumption, and deletion) and task execution logic before introducing the complexity of a full agent swarm.
+
+\subsection{Phase 2: API Exposure}
+
+Once the CLI workflow was stable, we encapsulated the core logic within a Flask-based RESTful API. This phase required mapping the internal Python agent methods to exposed HTTP endpoints, establishing a standard for request handling, error propagation, and status codes. Rigorous integration testing was conducted using Postman to ensure that the API layer correctly translated external HTTP requests into the underlying agent operations, effectively preparing the system for client-side integration.
+
+\subsection{Phase 3: Frontend Integration}
+
+To bridge the gap between the backend logic and the end-user, we developed a React.js frontend. This phase focused on User Experience (UX), specifically the creation of a chat interface capable of capturing natural language input and rendering the system's real-time state. The frontend was tightly coupled with the Flask endpoints, requiring end-to-end validation to ensure that asynchronous agent responses were accurately visualized in the browser, thereby completing the full-stack loop.
+
+\subsection{Phase 4: Domain Expansion (The Agent Swarm)}
+
+With the full-stack architecture in place, the system was systematically scaled from a single agent to a comprehensive suite of eight specialized domain agents. We adopted a standardized expansion pattern for each new domain: defining the specific context, implementing the agent instructions, developing the OSC tools, and finally performing integration testing.
+
+The resulting swarm covers the full breadth of DAW operations:
+\begin{itemize}
+\item \textbf{Structural Management:} The \textit{Track}, \textit{Scene}, \textit{View}, and \textit{Application Agents} manage the session layout and global settings.
+\item \textbf{Sonic Manipulation:} The \textit{Device}, \textit{Clip}, \textit{Clip Slot}, and \textit{Song Agents} handle the direct modification of audio and MIDI data.
+\end{itemize}
+
+By adhering to a modular implementation strategy, we ensured that adding complex capabilities (such as device control) did not disrupt the stability of the existing architecture.
+
+\subsection{Phase 5: Multi-Agent Collaboration \& Optimization}
+
+The introduction of multiple agents necessitated a dedicated optimization phase. Initial stress testing with complex, multi-step prompts (e.g., ``Create a new track and add a reverb'') revealed bottlenecks in state synchronization and error propagation across agent boundaries.
+
+To address this, we refined the coordination mechanisms to ensure memory consistency. This involved optimizing the task execution pipeline to handle sequential dependencies between agents and implementing robust recovery strategies for partial failures. This phase was critical in transforming a collection of individual tools into a cohesive, collaborative system.

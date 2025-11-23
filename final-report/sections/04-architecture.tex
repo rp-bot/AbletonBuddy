@@ -1,0 +1,82 @@
+\section{System Architecture \& Methodology}
+\label{sec:architecture}
+
+\subsection{High-Level Overview}
+
+The system is designed as a modular, event-driven application that decouples the user's natural language intent from the low-level technical execution. The architecture follows a Human-in-the-Loop (HITL) design, ensuring that generative AI suggestions are validated against structured ``Knowledge Priors'' before interacting with the live production environment.
+
+\subsection{The Tech Stack}
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|p{2.5cm}|p{3cm}|X|}
+\hline
+\textbf{Component} & \textbf{Technology} & \textbf{Role} \\
+\hline
+Frontend & React.js & Provides the chat interface and real-time state visualization for the user. \\
+\hline
+Backend API & Flask (Python) & Orchestrates the application logic and manages websocket connections. \\
+\hline
+AI Orchestration & Marvin + Pydantic & Handles intent classification, entity extraction, and agentic workflow management using structured outputs. \\
+\hline
+Control Layer & AbletonOSC & The translation layer that converts Python commands into Open Sound Control (OSC) messages compatible with Ableton Live. \\
+\hline
+\end{tabularx}
+\caption{Technology Stack Components}
+\label{tab:tech-stack}
+\end{table}
+
+\subsection{The ``Agentic Swarm'' Pipeline}
+
+Unlike standard ``Single Shot'' LLM calls, our backend utilizes a multi-step reasoning pipeline to ensure safety and accuracy in the creative workflow.
+
+\subsubsection{Step 1: Input \& Disambiguation}
+
+Raw user input (e.g., ``The drums sound weak'') is first passed to a Disambiguation Module. This module checks for vagueness. If the request lacks context (e.g., ``Fix it''), the system halts and requests clarification. If clear, it passes to the classifier.
+
+\subsubsection{Step 2: Classification \& Task Extraction (The Router)}
+
+We utilize Marvin to classify the intent into specific domains.
+
+\textbf{Input:} ``Create a hiphop melody.''
+
+\textbf{Classification:} Composition\_Task (vs. Song\_Task or Track\_Task).
+
+\textbf{Extraction:} The system extracts structured entities using Pydantic models: \{Task: ``Create'', Genre: ``Hiphop'', Element: ``Melody''\}.
+
+\subsubsection{Step 3: Agent Assignment \& Knowledge Retrieval}
+
+Once classified, the task is assigned to a specialized Domain Agent (e.g., The CompositionAgent).
+
+\textbf{The Critical Difference:} Instead of hallucinating a solution, the Agent retrieves Knowledge Priors---pre-validated heuristics (e.g., ``Hiphop Melody = Minor Pentatonic Scale + 808 Bass + Syncopated Rhythm'').
+
+\subsubsection{Step 4: Execution \& Verification}
+
+The Agent attempts to execute the task via the OSC Layer.
+
+\textbf{Success:} The state change is confirmed by Ableton (via an OSC reply).
+
+\textbf{Failure:} If the track doesn't exist or the device is missing, an error flag is raised.
+
+\subsubsection{Step 5: The Summary Agent}
+
+Regardless of success or failure, the Summary Agent aggregates the logs. It translates the technical outcome back into natural language for the user (e.g., ``I created a hiphop melody on track 1 using a minor pentatonic scale in C minor with syncopated rhythms.'' or ``I couldn't create the melody---no MIDI track was available. Should I create a new track?'').
+
+\subsection{Visual Architecture Diagram}
+
+Figure~\ref{fig:architecture} illustrates the system architecture. The diagram shows the flow from the React frontend through the Flask/Marvin core, which includes the Disambiguator Node and Router that splits into specialized agents (Mixing Agent, Arrangement Agent). These agents consult the Knowledge Priors database before executing commands via the OSC protocol to Ableton Live. The feedback loop completes through OSC responses processed by the Summary Agent, which returns natural language feedback to the React UI.
+
+\begin{figure}[h]
+\centering
+% TODO: Add architecture diagram here
+% The diagram should show:
+% Left Box (Frontend): React UI $\rightarrow$ HTTP POST (``Create a hiphop melody'')
+% Middle Box (Flask/Marvin Core):
+% $\downarrow$ Disambiguator Node
+% $\downarrow$ Router (Diamond Shape) splits into $\rightarrow$ [Composition Agent] / [Mixing Agent] / [Arrangement Agent]
+% $\downarrow$ Agents consult [Knowledge Priors DB]
+% Right Box (Control): $\rightarrow$ OSC Protocol $\rightarrow$ Ableton Live
+% Bottom Loop: $\leftarrow$ OSC Feedback $\leftarrow$ Summary Agent $\rightarrow$ React UI
+\caption{System Architecture Diagram}
+\label{fig:architecture}
+\end{figure}
