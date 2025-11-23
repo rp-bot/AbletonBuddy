@@ -1,5 +1,89 @@
 \section{Experimental Setup \& Results}
 \label{sec:experimental-setup-results}
 
-% Add your experimental setup and results content here
+To validate the efficacy of the system, we designed a comparative Human-Computer Interaction (HCI) study. The primary objective was to quantify the "Efficiency Lift" provided by the semantic interface compared to traditional manual workflows in Ableton Live. The study focuses on three core metrics: Time to Task Completion (TTC), Cognitive Load (NASA-TLX), and Semantic Accuracy.
+
+\subsection{Participants}
+
+The study design calls for $N=10$ participants with varying levels of music production expertise, stratified into two groups:
+
+\begin{itemize}
+    \item \textbf{Novices (n=5):} Less than 1 year of experience; familiar with concepts but struggle with technical implementation.
+    \item \textbf{Experts (n=5):} 5+ years of experience; highly proficient with Ableton Live shortcuts and signal flow.
+\end{itemize}
+
+This stratification allows us to test the hypothesis that the system democratizes complex production techniques for novices while accelerating workflow for experts.
+
+\subsection{Experimental Design}
+
+We utilized a \textbf{Within-Subjects Design}, where each participant performs a set of standardized production tasks using two distinct methods. The order of methods is counterbalanced to prevent learning effects.
+
+\begin{enumerate}
+    \item \textbf{Control Condition (Manual):} Participants execute tasks using the standard mouse, keyboard, and browser search (for technique lookup) within Ableton Live.
+    \item \textbf{Experimental Condition (Semantic-Live):} Participants execute the same goals using the natural language chat interface.
+\end{enumerate}
+
+\subsection{Task Design}
+
+The experiment consists of three tasks increasing in complexity and abstraction, designed to stress-test specific architectural components:
+
+\textbf{Task A: Explicit Command (Structural)} \\
+
+\textit{"Create three Audio tracks, rename them to 'Vox', 'Gtr', and 'Bass', and group them."}
+
+\begin{itemize}
+    \item \textit{Objective:} Tests the \textbf{Track Agent's} ability to handle multi-step batch operations.
+\end{itemize}
+
+\textbf{Task B: Technical Configuration (Parameter)} \\
+
+\textit{"Add a Compressor to the Bass track and sidechain it to the Kick drum."}
+
+\begin{itemize}
+    \item \textit{Objective:} Tests the \textbf{Device Agent's} routing capabilities. This is a high-friction task manually (requires clicking multiple sub-menus).
+\end{itemize}
+
+\textbf{Task C: Abstract Semantic Request (Knowledge Prior)} \\
+
+\textit{"The vocals sound too thin. Make them warmer and more intimate."}
+
+\begin{itemize}
+    \item \textit{Objective:} Tests the \textbf{Translation Layer}. In the Manual condition, the user must know \textit{which} tools create "warmth" (e.g., EQ low-mid boost, saturation). In the Experimental condition, the system uses its Knowledge Priors to execute the chain automatically.
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+We capture both quantitative system logs and qualitative user feedback:
+
+\subsubsection{Quantitative Metrics}
+
+\begin{itemize}
+    \item \textbf{Time to Task Completion (TTC):} Measured in seconds from the start of the prompt/action to the final state verification.
+    \item \textbf{Interaction Steps:} The total number of discrete clicks or keystrokes required. This measures physical effort.
+    \item \textbf{Token Efficiency:} For the Experimental condition, we measure the total tokens consumed per task to validate our claim that the "No-MCP" architecture is cost-effective.
+\end{itemize}
+
+\subsubsection{Qualitative Metrics (NASA-TLX)}
+
+After each condition, participants complete a simplified NASA Task Load Index (NASA-TLX) survey to rate:
+
+\begin{itemize}
+    \item \textbf{Mental Demand:} "How much thinking was required?"
+    \item \textbf{Frustration:} "How insecure or discouraged did you feel?"
+    \item \textbf{Perceived Success:} "How satisfied were you with the sonic result?"
+\end{itemize}
+
+\subsection{Hypothesis}
+
+We hypothesize that:
+
+\begin{itemize}
+    \item \textbf{H1:} The Experimental condition will show a $>50\%$ reduction in TTC for Task C (Abstract Request) across all user groups.
+    \item \textbf{H2:} Novices will report significantly lower Mental Demand using the system compared to manual configuration.
+    \item \textbf{H3:} The system will maintain a sub-200ms latency for command acknowledgement, validating the architectural decoupling strategy.
+\end{itemize}
+
+\subsection{Results}
+
+The execution of the experimental study and collection of results is deferred to future work. The experimental framework described above provides a rigorous methodology for validating the system's efficacy once the study is conducted with participants.
 
