@@ -1,10 +1,10 @@
 # SCENE API - Example Prompts for Testing
 
-Use these prompts to validate the SCENE tools end-to-end. Scene indices are 0-based.
+Use these prompts to validate the SCENE tools end-to-end. Scene indices are 0-based. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Triggering Scenes
 
-- "Launch scene 0"
+- [EVAL] "Launch scene 0"
 - "Fire scene 2"
 - "Trigger the currently selected scene"
 - "Fire scene 1 and select the next scene"
@@ -12,19 +12,19 @@ Use these prompts to validate the SCENE tools end-to-end. Scene indices are 0-ba
 ## Scene Properties
 
 - "What is the name of scene 3?"
-- "Rename scene 1 to 'Chorus'"
+- [EVAL] "Rename scene 1 to 'Chorus'"
 - "What color is scene 0?"
-- "Set scene 2 color to blue"
+- [EVAL] "Set scene 2 color to blue"
 
-## Scene Tempo & Time Signature
+- ## Scene Tempo & Time Signature
 
 - "What tempo is scene 1 set to?"
-- "Set scene 0 tempo to 120 BPM"
+- [EVAL] "Set scene 0 tempo to 120 BPM"
 - "Is tempo override enabled for scene 2?"
 - "Enable tempo override for scene 2"
 
 - "What time signature is scene 3 using?"
-- "Set scene 1 time signature to 5/4"
+- [EVAL] "Set scene 1 time signature to 5/4"
 - "Enable time signature override for scene 1"
 
 ## Scene State

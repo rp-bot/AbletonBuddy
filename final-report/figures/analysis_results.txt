@@ -1,0 +1,25 @@
+Overall success rate: 75.6%
+
+Per-class summary (prompt-level):
+      class  num_prompts success_rate
+Application            5        60.0%
+       Clip            5        80.0%
+   ClipSlot            5        80.0%
+     Device            5        20.0%
+  MultiStep            5       100.0%
+      Scene            5        60.0%
+       Song            5        80.0%
+      Track            5       100.0%
+       View            5       100.0%
+
+Per-class summary (subtask-level):
+      class  total_subtasks subtask_success_rate
+Application             5.0                60.0%
+       Clip             5.0                80.0%
+   ClipSlot             5.0                80.0%
+     Device             5.0                20.0%
+  MultiStep            11.0                72.7%
+      Scene             5.0                60.0%
+       Song             5.0                80.0%
+      Track             5.0               100.0%
+       View             5.0               100.0%

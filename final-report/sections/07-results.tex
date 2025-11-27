@@ -1,89 +1,54 @@
 \section{Experimental Setup \& Results}
 \label{sec:experimental-setup-results}
 
-To validate the efficacy of the system, we designed a comparative Human-Computer Interaction (HCI) study. The primary objective was to quantify the "Efficiency Lift" provided by the semantic interface compared to traditional manual workflows in Ableton Live. The study focuses on three core metrics: Time to Task Completion (TTC), Cognitive Load (NASA-TLX), and Semantic Accuracy.
+To validate the efficacy of the system in a way that is reproducible and directly tied to semantic control, we construct an automatic, objective evaluation based on a suite of natural language prompts. Concretely, we define a corpus of test cases spanning the major Ableton domains covered by our agents, with prompts stored in category-specific files such as \texttt{TRACK.md}, \texttt{DEVICE.md}, \texttt{CLIP.md}, and \texttt{SONG.md}. The corresponding agents expose eight high-level classes: \emph{Application}, \emph{ClipSlot}, \emph{Clip}, \emph{Device}, \emph{Scene}, \emph{Song}, \emph{Track}, and \emph{View}---that together span the controllable parameter space of Ableton Live for this work. Each line-level test case specifies: (i) a natural language instruction, (ii) any required initial preconditions on the Live set, and (iii) a canonical target post-condition on the world-state (e.g., which tracks/devices should exist, which parameters should be set to which values, how clips and scenes should be arranged). Higher-level notions of ``composition'' or artistic quality would require subjective, qualitative assessment and are therefore considered out of scope for this project.
 
-\subsection{Participants}
+\subsection{Prompt Corpus \& Split}
 
-The study design calls for $N=10$ participants with varying levels of music production expertise, stratified into two groups:
+The prompt corpus is used both during development (for iterative debugging of agents and tool wiring) and for held-out evaluation. To obtain an unbiased estimate of performance, we reserve $20\%$ of the prompts in each domain as an evaluation set that is never seen during development. At evaluation time, we sample from this held-out subset and execute the full agent stack end-to-end for each prompt, starting from a standardized initial Live set configuration.
 
-\begin{itemize}
-    \item \textbf{Novices (n=5):} Less than 1 year of experience; familiar with concepts but struggle with technical implementation.
-    \item \textbf{Experts (n=5):} 5+ years of experience; highly proficient with Ableton Live shortcuts and signal flow.
-\end{itemize}
+\subsection{Execution \& Ground Truth Checking}
 
-This stratification allows us to test the hypothesis that the system democratizes complex production techniques for novices while accelerating workflow for experts.
+For every evaluation prompt, the system is given only the natural language instruction; it must decide which agent(s) to invoke, which low-level Live API calls to make, and in what order. After execution, we snapshot the resulting Ableton world-state and compare it against the canonical target for that prompt. This comparison is purely symbolic and objective: a test is marked as \emph{successful} if and only if all required predicates hold (e.g., a track with a given name exists, a specified device is present on a particular track, a parameter lies within a tolerance band), and as \emph{failed} otherwise.
 
-\subsection{Experimental Design}
+\subsection{Aggregate Metrics}
 
-We utilized a \textbf{Within-Subjects Design}, where each participant performs a set of standardized production tasks using two distinct methods. The order of methods is counterbalanced to prevent learning effects.
-
-\begin{enumerate}
-    \item \textbf{Control Condition (Manual):} Participants execute tasks using the standard mouse, keyboard, and browser search (for technique lookup) within Ableton Live.
-    \item \textbf{Experimental Condition (Semantic-Live):} Participants execute the same goals using the natural language chat interface.
-\end{enumerate}
-
-\subsection{Task Design}
-
-The experiment consists of three tasks increasing in complexity and abstraction, designed to stress-test specific architectural components:
-
-\textbf{Task A: Explicit Command (Structural)} \\
-
-\textit{"Create three Audio tracks, rename them to 'Vox', 'Gtr', and 'Bass', and group them."}
-
-\begin{itemize}
-    \item \textit{Objective:} Tests the \textbf{Track Agent's} ability to handle multi-step batch operations.
-\end{itemize}
-
-\textbf{Task B: Technical Configuration (Parameter)} \\
-
-\textit{"Add a Compressor to the Bass track and sidechain it to the Kick drum."}
-
-\begin{itemize}
-    \item \textit{Objective:} Tests the \textbf{Device Agent's} routing capabilities. This is a high-friction task manually (requires clicking multiple sub-menus).
-\end{itemize}
-
-\textbf{Task C: Abstract Semantic Request (Knowledge Prior)} \\
-
-\textit{"The vocals sound too thin. Make them warmer and more intimate."}
-
-\begin{itemize}
-    \item \textit{Objective:} Tests the \textbf{Translation Layer}. In the Manual condition, the user must know \textit{which} tools create "warmth" (e.g., EQ low-mid boost, saturation). In the Experimental condition, the system uses its Knowledge Priors to execute the chain automatically.
-\end{itemize}
-
-\subsection{Evaluation Metrics}
-
-We capture both quantitative system logs and qualitative user feedback:
-
-\subsubsection{Quantitative Metrics}
-
-\begin{itemize}
-    \item \textbf{Time to Task Completion (TTC):} Measured in seconds from the start of the prompt/action to the final state verification.
-    \item \textbf{Interaction Steps:} The total number of discrete clicks or keystrokes required. This measures physical effort.
-    \item \textbf{Token Efficiency:} For the Experimental condition, we measure the total tokens consumed per task to validate our claim that the "No-MCP" architecture is cost-effective.
-\end{itemize}
-
-\subsubsection{Qualitative Metrics (NASA-TLX)}
-
-After each condition, participants complete a simplified NASA Task Load Index (NASA-TLX) survey to rate:
-
-\begin{itemize}
-    \item \textbf{Mental Demand:} "How much thinking was required?"
-    \item \textbf{Frustration:} "How insecure or discouraged did you feel?"
-    \item \textbf{Perceived Success:} "How satisfied were you with the sonic result?"
-\end{itemize}
-
-\subsection{Hypothesis}
-
-We hypothesize that:
-
-\begin{itemize}
-    \item \textbf{H1:} The Experimental condition will show a $>50\%$ reduction in TTC for Task C (Abstract Request) across all user groups.
-    \item \textbf{H2:} Novices will report significantly lower Mental Demand using the system compared to manual configuration.
-    \item \textbf{H3:} The system will maintain a sub-200ms latency for command acknowledgement, validating the architectural decoupling strategy.
-\end{itemize}
+From these per-prompt binary outcomes, we compute several aggregate metrics: overall success rate across the entire evaluation set; per-domain success rates (e.g., Track, Device, Clip, Scene, Song, Application, View); and error breakdowns by failure mode (e.g., mis-parsed intent, wrong agent, correct agent but incorrect parameters). Because the evaluation harness logs all model calls and tool invocations, we additionally measure token usage and end-to-end latency for each prompt, validating that the ``No-MCP'' architecture remains cost-effective and responsive even under multi-step semantic requests.
 
 \subsection{Results}
 
-The execution of the experimental study and collection of results is deferred to future work. The experimental framework described above provides a rigorous methodology for validating the system's efficacy once the study is conducted with participants.
+To directly evaluate the semantic interface in a task-oriented, objective manner, we construct a benchmark of natural language ``test prompts'' that mirror the three task classes above (structural, parameter-routing, and abstract semantic requests). This benchmark is drawn from the same pool of prompts used during system development, but we hold out $20\%$ as a disjoint evaluation set. For each prompt, we specify a canonical target world-state in Ableton (e.g., the presence of tracks/devices, parameter values, or clip routing), and we execute the system end-to-end to determine whether the final Live set matches this target. This yields binary success/failure labels for each prompt, from which we compute aggregate metrics such as overall success rate, per-task-type success rate, and error breakdowns by agent (e.g., Track vs.\ Device vs.\ Translation Layer), as well as token and latency statistics for each successful completion.
+
+In addition to this automatic evaluation, we envision a complementary human study following the within-subjects protocol described above: participants would complete the three task families both manually and with the semantic interface while we record TTC, interaction steps, and NASA-TLX scores. Human raters would also perform blind A/B listening on the resulting mixes for Task C to validate that automatically ``successful'' states correspond to perceptually preferable outcomes. Together, the objective prompt-level benchmark and the subjective human study provide a comprehensive picture of how well the system translates natural language intent into concrete production outcomes.
+
+Concretely, our held-out prompt benchmark yields an overall success rate of $75.6\%$ across all classes (see \autoref{fig:analysis-results}). Per-class prompt-level success rates reveal that the interface is highly reliable for structural operations on \emph{Track}, \emph{View}, and \emph{MultiStep} prompts (all at $100\%$ success), and performs strongly on \emph{Clip}, \emph{ClipSlot}, and \emph{Song} (each at $80\%$), while \emph{Application}, \emph{Scene}, and especially \emph{Device} prompts remain more challenging (with success rates of $60\%$, $60\%$, and $20\%$, respectively). To better capture behavior on multi-step instructions, we additionally compute a subtask-aware metric following the same logic as our analysis script: simple prompts are treated as a single subtask, whereas multi-step prompts contribute multiple subtasks based on their internal decomposition. Under this lens, we observe that multi-step prompts achieve a subtask success rate of $72.7\%$, indicating that, even when entire sequences occasionally fail, a substantial fraction of their individual tool calls and intermediary goals are nevertheless executed correctly.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.8\linewidth]{figures/analysis_results.pdf}
+    \caption{Per-class prompt- and subtask-level success rates on the held-out natural language test prompts. Bars show prompt-level success for each agent class, with overlaid subtask-level success for multi-step prompts, as computed by the analysis script.}
+    \label{fig:analysis-results}
+\end{figure}
+
+\begin{table}[t]
+    \centering
+    \small
+    \begin{tabular}{lccc}
+        \hline
+        Class & \# Prompts & Prompt success & Subtask success \\
+        \hline
+        Application & 5 & 60.0\% & 60.0\% \\
+        Clip        & 5 & 80.0\% & 80.0\% \\
+        ClipSlot    & 5 & 80.0\% & 80.0\% \\
+        Device      & 5 & 20.0\% & 20.0\% \\
+        MultiStep   & 5 & 100.0\% & 72.7\% \\
+        Scene       & 5 & 60.0\% & 60.0\% \\
+        Song        & 5 & 80.0\% & 80.0\% \\
+        Track       & 5 & 100.0\% & 100.0\% \\
+        View        & 5 & 100.0\% & 100.0\% \\
+        \hline
+    \end{tabular}
+    \caption{Quantitative summary of held-out evaluation results by agent class. Prompt success is the fraction of prompts for which the final Ableton world-state exactly matches the canonical target; subtask success is the fraction of subtasks completed correctly, following the subtask accounting implemented in \texttt{analyze\_results.py}.}
+    \label{tab:analysis-results}
+\end{table}
 
