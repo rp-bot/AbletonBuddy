@@ -115,23 +115,6 @@ To enable simulation mode, edit the OSC client configuration:
 
 3. **Save the file and restart the application**
 
-### What Happens in Simulation Mode
-
-When simulation mode is enabled:
-
-- All OSC commands to Ableton Live are intercepted
-- Instead of sending real commands, the system returns simulation messages like `[SIMULATION MODE] Would send OSC: /live/song/play []`
-- You can still use all the chat features, conversation persistence, and web interface
-- The AI will respond as if it's controlling Ableton Live, but no actual commands are sent
-- Perfect for learning the tool's capabilities and testing the interface
-
-### Switching Back to Live Mode
-
-To use Ableton Buddy with a real Ableton Live instance:
-
-1. Ensure Ableton Live is running with AbletonOSC installed
-2. Change `OSC_AVAILABLE = False` back to `OSC_AVAILABLE = True`
-3. Restart the application
 
 ## Usage
 
@@ -193,29 +176,6 @@ The API will be available at `http://localhost:8000` with interactive documentat
 - `POST /threads/{thread_id}/messages` - Add message and get response
 - `POST /threads/{thread_id}/stream` - Stream response in real-time (SSE)
 - `DELETE /threads/{thread_id}/stream` - Cancel an active stream
-
-## Features
-
-- **Natural language interaction:** Control Ableton Live with simple, natural language commands.
-- **Conversation persistence:** All conversations are automatically saved to a SQLite database.
-- **Resume conversations:** Continue previous sessions by providing a thread ID.
-- **Clean UI:** See only what matters - your input and assistant responses.
-- **Modern Web Interface:** Beautiful React-based chat interface with real-time streaming.
-- **Real-time streaming:** Watch the assistant work in real-time (via API and web UI).
-- **REST API:** Complete API with SSE streaming support for frontend integration.
-- **Real-time control:** See your changes reflected in Ableton Live in real-time.
-- **Simulation mode:** Test and explore the tool without Ableton Live installed.
-- **Extensible:** Easily add new tools and features to expand Ableton Buddy's capabilities.
-- **Comprehensive Song Control:**
-  - Play, stop, and continue playback.
-  - Set tempo, and tap tempo.
-  - Control the metronome.
-  - Create, delete, and duplicate tracks and scenes.
-  - And much more!
-- **Query Ableton Live's State:**
-  - Get the current tempo, playback state, and song time.
-  - Get the names of tracks and the number of tracks and scenes.
-  - And much more!
 
 ## Example Prompts
 
@@ -329,19 +289,3 @@ Here are some example prompts you can try with Ableton Buddy to get started:
 - "Is the metronome on?"
 - "What's the current monitoring state of track 1?"
 
-## Architecture
-
-### Thread Persistence
-
-Ableton Buddy uses Marvin's built-in SQLite database to automatically persist all conversations. Each conversation is stored as a thread with a unique ID that can be used to resume the conversation later.
-
-The database file `ableton_buddy.db` is created automatically in the project root directory.
-
-### Message Filtering
-
-To provide a clean user experience, the system filters messages to show only:
-
-- User input messages
-- Final assistant responses (summaries)
-
-Internal processing messages (classification, extraction, task execution) are stored in the database but hidden from the CLI and API responses by default.
