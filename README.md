@@ -6,7 +6,9 @@ Your AI-powered command center for Ableton Live.
 
 Watch the demo video to see Ableton Buddy in action:
 
-[**Watch Demo Video**](final-report/figures/demo_video.mp4)
+<p align="center" width="100%">
+<video src="https://github.com/rp-bot/AbletonBuddy/blob/6618aad52b354551ce762ea98c45a4cbbcb06a5a/final-report/figures/demo_video.mp4"  width="320" height="240" controls></video>
+</p>
 
 ## Description
 
