@@ -12,10 +12,10 @@ BIBTEX = bibtex
 # Compilation flags
 LATEX_FLAGS = -interaction=nonstopmode -halt-on-error
 
-# Default target
-all: $(PDF)
+# Default target (with bibliography)
+all: bib
 
-# Build PDF from LaTeX
+# Build PDF from LaTeX (without bibliography - use 'bib' target instead)
 $(PDF): $(TEX)
 	@echo "Compiling LaTeX document..."
 	$(LATEX) $(LATEX_FLAGS) $(TEX)
@@ -25,7 +25,7 @@ $(PDF): $(TEX)
 	$(LATEX) $(LATEX_FLAGS) $(TEX)
 	@echo "PDF generated: $(PDF)"
 	@echo "Cleaning up auxiliary files..."
-	@rm -f *.aux *.log *.out *.toc *.bbl *.blg *.synctex.gz *.fdb_latexmk *.fls
+	@rm -f *.aux *.log *.out *.toc *.synctex.gz *.fdb_latexmk *.fls
 	@echo "Done!"
 
 # Build with bibliography (if you add .bib file later)
@@ -36,8 +36,8 @@ bib: $(TEX)
 	$(LATEX) $(LATEX_FLAGS) $(TEX)
 	$(LATEX) $(LATEX_FLAGS) $(TEX)
 	@echo "PDF generated: $(PDF)"
-	@echo "Cleaning up auxiliary files..."
-	@rm -f *.aux *.log *.out *.toc *.bbl *.blg *.synctex.gz *.fdb_latexmk *.fls
+	@echo "Cleaning up auxiliary files (keeping .bbl and .blg for bibliography)..."
+	@rm -f *.aux *.log *.out *.toc *.synctex.gz *.fdb_latexmk *.fls
 	@echo "Done!"
 
 # Clean auxiliary files

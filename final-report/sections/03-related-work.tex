@@ -1,10 +1,10 @@
 \section{Related Work}
 \label{sec:related-work}
 
-The application of artificial intelligence in music production has seen significant growth, shifting from simple information retrieval and symbolic generation (MIDI) toward integrated, intelligent assistance within Digital Audio Workstations (DAWs)~\cite{agostini2021deep,huang2023musiclm}.
+The application of artificial intelligence in music production has seen significant growth, shifting from simple information retrieval and symbolic generation (MIDI) toward integrated, intelligent assistance within Digital Audio Workstations (DAWs)~\cite{agostini2021deep,agostinelli2023musiclm}.
 Recent efforts have focused on transforming AI from a generator into a co-creative partner capable of navigating complex software environments~\cite{fiebrink2011real,caramiaux2014beyond}.
 
-\subsection*{Current Landscape of Intelligent Music Assistants}
+\subsection{Current Landscape of Intelligent Music Assistants}
 Several prominent systems have emerged that attempt to bridge natural language and DAW control, each with distinct methodologies:
 
 \textbf{DAWZY:} An open-source, voice- and text-driven assistant for the REAPER DAW~\cite{dawzy2024}.
@@ -20,7 +20,7 @@ It represents a step toward ``expert systems'' but focuses on providing advice r
 Ableton Copilot is built on the Model Context Protocol (MCP)~\cite{mcp2024} to manage granular MIDI operations and device control.
 Similarly, Loop Copilot integrates LLMs with a Global Attribute Table (GAT) to maintain continuity during iterative editing.
 
-\subsection*{Limitations of Current Approaches (The ``Context'' Gap)}
+\subsection{Limitations of Current Approaches (The ``Context'' Gap)}
 While the systems above demonstrate the viability of AI in DAWs, they generally rely on the LLM's ability to translate natural language directly into actionable commands via the Model Context Protocol (MCP) or massive context injection~\cite{devlin2018bert,radford2019language}.
 
 This approach presents two critical inefficiencies:
@@ -28,10 +28,10 @@ This approach presents two critical inefficiencies:
 \textbf{Computational Inefficiency:} Relying on MCP requires the system to constantly ``read'' and maintain the entire session state to maintain coherence.
 This ``brute force'' context management burns tokens rapidly and introduces latency, which is detrimental to the real-time flow of music production~\cite{chen2023evaluating}.
 
-\textbf{The ``Theory vs. Production'' Gap:} Many existing models are trained on symbolic representations (music theory/MIDI) rather than audio engineering physics~\cite{roberts2018hierarchical,huang2022musicgen}.
+\textbf{The ``Theory vs. Production'' Gap:} Many existing models are trained on symbolic representations (music theory/MIDI) rather than audio engineering physics~\cite{roberts2018hierarchical,copet2023musicgen}.
 They struggle to bridge the gap between high-level creative intent (e.g., ``Make it punchy'') and the nuanced signal processing required to achieve it (e.g., specific compression ratios and EQ curves)~\cite{de2013audio}.
 
-\subsection*{Our Contribution: Domain-Specific Knowledge Priors}
+\subsection{Our Contribution: Domain-Specific Knowledge Priors}
 Our system addresses these limitations by moving away from generic MCP-based state recording.
 Instead, we propose a workflow that incorporates explicit, structured music producer knowledge priors.
 
@@ -41,6 +41,6 @@ Rather than relying on an LLM to ``figure out'' the session state from scratch e
 
 \textbf{Priors Consultation:} referencing a static knowledge base of expert signal chains (e.g., standard vocal processing chains) rather than dynamically generating them via token-heavy reasoning.
 
-\textbf{Heuristic Execution:} Using lightweight Open Sound Control (OSC) messages~\cite{wright2001open} mapped to these expert priors.
+\textbf{Heuristic Execution:} Using lightweight Open Sound Control (OSC) messages~\cite{wright2003open} mapped to these expert priors.
 
 This approach allows the system to provide expert-level guidance that aligns with professional mixing philosophies while significantly reducing the token overhead and latency associated with standard MCP agents.
