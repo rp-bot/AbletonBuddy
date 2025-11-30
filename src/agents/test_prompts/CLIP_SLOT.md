@@ -1,11 +1,11 @@
 # CLIP_SLOT API - Example Prompts for Testing
 
-Use these prompts to validate the CLIP_SLOT tools end-to-end. Track and slot indices are 0-based.
+Use these prompts to validate the CLIP_SLOT tools end-to-end. Track and slot indices are 0-based. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Discovery / State
 
-- "Does track 0, slot 3 have a clip?"
-- "Does track 1, slot 0 have a stop button?"
+- [EVAL] "Does track 0, slot 3 have a clip?"
+- [EVAL] "Does track 1, slot 0 have a stop button?"
 - "Show if track 2 slot 4 has a clip and stop button"
 
 ## Actions
@@ -15,9 +15,9 @@ Use these prompts to validate the CLIP_SLOT tools end-to-end. Track and slot ind
 
 ## Create / Delete Clip in Slot
 
-- "Create an empty 4-bar clip in track 1, slot 0"
+- [EVAL] "Create an empty 4-bar clip in track 1, slot 0"
 - "Create a 16-beat clip in track 0 slot 3"
-- "Delete the clip in track 2, slot 1"
+- [EVAL] "Delete the clip in track 2, slot 1"
 
 ## Stop Button Control
 
@@ -26,12 +26,12 @@ Use these prompts to validate the CLIP_SLOT tools end-to-end. Track and slot ind
 
 ## Duplicate Clip Between Slots
 
-- "Duplicate the clip from track 0, slot 1 to track 2, slot 0"
+- [EVAL] "Duplicate the clip from track 0, slot 1 to track 2, slot 0"
 - "Copy clip from track 1 slot 3 to track 1 slot 0"
 
 ## Multi-step Workflows
 
-- "Create an 8-beat clip in track 0 slot 1, then fire it"
+- [EVAL] "Create an 8-beat clip in track 0 slot 1, then fire it"
 - "Duplicate clip from track 0 slot 0 to track 1 slot 0, then enable stop button on the target slot"
 - "Create a 4-bar clip in track 2 slot 0, then rename the clip to 'Intro'" (expects CLIP API to follow after slot create)
 

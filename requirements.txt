@@ -6,3 +6,5 @@ uvicorn
 sse-starlette
 aiosqlite
 python-dotenv
+matplotlib
+pandas

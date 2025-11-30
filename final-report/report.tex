@@ -1,0 +1,106 @@
+\documentclass[11pt,a4paper]{article}
+
+% -------------------
+% Packages
+% -------------------
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8x]{inputenc}
+\usepackage[english]{babel} % English translations
+\usepackage{mathptmx} % Use Times Font
+\usepackage[pdftex]{graphicx} % Required for including pictures
+\usepackage[pdftex,linkcolor=black,pdfborder={0 0 0}]{hyperref} % Format links for pdf
+\usepackage{enumitem} % Includes lists
+\usepackage{calc} % To reset the counter in the document after title page
+\usepackage[all]{nowidow} % Tries to remove widows
+\usepackage[protrusion=true,expansion=true]{microtype} % Improves typography, load after fontpackage is selected
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tabularx} % For tables that fit page width
+\usepackage[font=small,labelfont=bf]{caption} % Distinct styling for figure and table captions
+
+% -------------------
+% Page geometry and formatting
+% -------------------
+
+\usepackage[a4paper, lmargin=0.1666\paperwidth, rmargin=0.1666\paperwidth, tmargin=0.1111\paperheight, bmargin=0.1111\paperheight]{geometry} %margins
+\linespread{1.2} % Set linespace
+\frenchspacing % No double spacing between sentences
+
+% -------------------
+% Set pdf information and add title, fill in the fields
+% -------------------
+
+\hypersetup{ 	
+    pdftitle = {AbletonBuddy: A Domain-Aware Natural Language Interface for Autonomous Control of Ableton Live via OSC},
+    pdfauthor = {Pratham Vadhulas},
+    pdfsubject = {CS6235 Final Report},
+}
+
+% -------------------
+% Header and footer
+% -------------------
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{AbletonBuddy}
+\fancyhead[R]{\today}
+\fancyfoot[C]{\thepage}
+
+% -------------------
+% Title page information
+% -------------------
+
+\title{AbletonBuddy: A Domain-Aware Natural Language Interface for Autonomous Control of Ableton Live via OSC}
+\author{Pratham Vadhulas\\
+        \\
+        Course: CS6235\\
+        Term: Fall 2025}
+\date{\today}
+
+%-----------------------
+% Begin document
+%-----------------------
+
+\begin{document}
+
+% Title page
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+% Table of contents
+\tableofcontents
+\newpage
+
+% Include sections
+\input{sections/01-introduction}
+
+\input{sections/02-motivation}
+
+\input{sections/03-related-work}
+
+\input{sections/04-architecture}
+
+\input{sections/05-implementation-steps}
+
+\input{sections/07-results}
+
+\input{sections/08-meta-skills}
+
+\input{sections/09-conclusion-future-work}
+
+\input{sections/10-deliverables}
+
+% References
+\bibliographystyle{plain}
+\bibliography{references}
+
+%-----------------------
+% End document
+%-----------------------
+
+\end{document}

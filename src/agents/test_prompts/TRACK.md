@@ -1,19 +1,19 @@
 # TRACK API - Example Prompts for Testing
 
-Use these prompts to validate the TRACK tools end-to-end. Track indices are 0-based.
+Use these prompts to validate the TRACK tools end-to-end. Track indices are 0-based. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Mix Controls
 
-- "Mute track 1"
+- [EVAL] "Mute track 1"
 - "Solo track 0"
-- "Set track 2 volume to 0.75"
+- [EVAL] "Set track 2 volume to 0.75"
 - "Pan track 3 hard left"
-- "Set send A on track 1 to 0.5"
+- [EVAL] "Set send A on track 1 to 0.5"
 
 ## Track Properties & State
 
 - "What is the name of track 0?"
-- "Rename track 1 to 'Bass'"
+- [EVAL] "Rename track 1 to 'Bass'"
 - "What color is track 2?"
 - "Is track 3 armed?"
 - "What is the output meter level of track 0?"
@@ -33,7 +33,7 @@ Use these prompts to validate the TRACK tools end-to-end. Track indices are 0-ba
 
 ## Clip Control on Track
 
-- "Stop all clips on track 0"
+- [EVAL] "Stop all clips on track 0"
 
 ## Track State Queries
 
@@ -43,7 +43,7 @@ Use these prompts to validate the TRACK tools end-to-end. Track indices are 0-ba
 
 ## Multi-step Workflows
 
-- "Rename track 0 to 'Drums' and set its color to red"
+- [EVAL] "Rename track 0 to 'Drums' and set its color to red"
 - "List devices on track 1, then set the track volume to 0.8"
 - "Get clip names on track 0 and stop all clips"
 

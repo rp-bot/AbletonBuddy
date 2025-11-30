@@ -1,19 +1,19 @@
 # CLIP API - Example Prompts for Testing
 
-Use these prompts to validate the CLIP tools end-to-end. Track and clip indices are 0-based.
+Use these prompts to validate the CLIP tools end-to-end. Track and clip indices are 0-based. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Playback & Looping
 
-- "Launch clip 0 on track 1"
+- [EVAL] "Launch clip 0 on track 1"
 - "Stop clip 2 on track 0"
 - "Duplicate the loop for clip 1 on track 3"
 - "Set clip 0 on track 0 loop start to 8 beats"
-- "Set clip 0 on track 0 loop length to 4 beats"
+- [EVAL] "Set clip 0 on track 0 loop length to 4 beats"
 
 ## Clip Properties
 
 - "What is the name of clip 0 on track 1?"
-- "Rename clip 1 on track 0 to 'Intro'"
+- [EVAL] "Rename clip 1 on track 0 to 'Intro'"
 - "What is the length of clip 2 on track 3?"
 - "Set clip 0 on track 0 gain to 1.2"
 - "What is the file path for clip 1 on track 2?"
@@ -36,14 +36,14 @@ Use these prompts to validate the CLIP tools end-to-end. Track and clip indices 
 
 - "What is the loop start for clip 1 on track 0?"
 - "Set clip 1 on track 0 loop end to 32 beats"
-- "Enable warping for clip 0 on track 2"
+- [EVAL] "Enable warping for clip 0 on track 2"
 - "What is the warping state of clip 2 on track 3?"
 
 ## MIDI Notes
 
 - "Show all notes in clip 0 on track 1"
 - "Show notes in clip 0 on track 1 between C3 and C5"
-- "Add note C4 at beat 0 duration 1 to clip 0 on track 1"
+- [EVAL] "Add note C4 at beat 0 duration 1 to clip 0 on track 1"
 - "Remove notes between beats 4 and 8 in clip 0 on track 1"
 
 ## Multi-step Workflows

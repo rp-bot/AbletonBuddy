@@ -1,27 +1,27 @@
 # APPLICATION API - Example Prompts for Testing
 
-Use these prompts to validate the Application API tools end-to-end.
+Use these prompts to validate the Application API tools end-to-end. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Connectivity / Health Checks
 
-- "Run a connection test"
-- "Is AbletonOSC responding?"
+- [EVAL] "Run a connection test"
+- [EVAL] "Is AbletonOSC responding?"
 - "Check the AbletonOSC connection"
 
 ## Metadata
 
-- "What Live version is running?"
+- [EVAL] "What Live version is running?"
 - "Tell me the Ableton Live major/minor version"
 
 ## Log Level Management
 
 - "What log level is AbletonOSC using?"
-- "Set the AbletonOSC log level to debug"
+- [EVAL] "Set the AbletonOSC log level to debug"
 - "Change the AbletonOSC log level to warning"
 
 ## Server Maintenance / Development
 
-- "Reload the AbletonOSC server"
+- [EVAL] "Reload the AbletonOSC server"
 - "Restart the AbletonOSC API" (maps to reload)
 
 ## Multi-step Workflows

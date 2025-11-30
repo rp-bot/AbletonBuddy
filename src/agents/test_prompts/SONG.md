@@ -1,10 +1,10 @@
 # SONG API - Example Prompts for Testing
 
-Use these prompts to validate the SONG tools end-to-end.
+Use these prompts to validate the SONG tools end-to-end. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Transport & Playback
 
-- "Start playback"
+- [EVAL] "Start playback"
 - "Stop the song"
 - "Continue playing"
 - "Jump forward 8 beats"
@@ -12,7 +12,7 @@ Use these prompts to validate the SONG tools end-to-end.
 
 ## Tempo & Time Signature
 
-- "Set the tempo to 128 BPM"
+- [EVAL] "Set the tempo to 128 BPM"
 - "Tap tempo"
 - "Set the time signature to 7/8"
 - "What is the current song tempo?"
@@ -20,14 +20,14 @@ Use these prompts to validate the SONG tools end-to-end.
 
 ## Looping & Position
 
-- "Enable loop from bar 4 for 8 bars"
+- [EVAL] "Enable loop from bar 4 for 8 bars"
 - "Disable looping"
 - "Set loop start to 16 beats and length to 8"
 - "What is the current song position?"
 
 ## Recording & Overdub
 
-- "Start session recording"
+- [EVAL] "Start session recording"
 - "Stop session recording"
 - "Enable arrangement overdub"
 - "Disable arrangement overdub"
@@ -40,7 +40,7 @@ Use these prompts to validate the SONG tools end-to-end.
 
 ## Track / Scene Management
 
-- "Create a new MIDI track"
+- [EVAL] "Create a new MIDI track"
 - "Create an audio track"
 - "Duplicate scene 2"
 - "Delete track 3"
@@ -59,7 +59,7 @@ Use these prompts to validate the SONG tools end-to-end.
 
 ## Multi-step Workflows
 
-- "Set tempo to 120 BPM, enable loop from bar 5 for 4 bars, then start playback"
+- [EVAL] "Set tempo to 120 BPM, enable loop from bar 5 for 4 bars, then start playback"
 - "Create a new scene and duplicate it"
 
 ## Error Handling / Edge Cases

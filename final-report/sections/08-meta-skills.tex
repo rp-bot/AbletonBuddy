@@ -1,0 +1,22 @@
+\section{Meta Skills}
+\label{sec:meta-skills}
+
+This project required moving beyond standard software engineering practices into the realm of experimental AI system design. The challenges encountered---specifically regarding latency, hallucinations, and protocol translation---necessitated the development of several key meta-skills.
+
+\subsection{Hybridizing Stochastic and Deterministic Logic}
+
+A primary learning outcome was realizing the limitations of ``pure'' Generative AI in real-time systems. Initially, the temptation was to allow the LLM to manage the entire state via the Model Context Protocol (MCP). However, we identified that this approach introduced unacceptable latency and token costs (``burning tokens'') for a creative workflow.
+
+We developed the skill of \textbf{Architectural Decoupling}: recognizing which parts of a system require creative reasoning (the ``What'') and which require rigid, hard-coded execution (the ``How''). By implementing ``Knowledge Priors'' (deterministic look-up tables) alongside the LLM, we learned to optimize for computational efficiency without sacrificing the flexibility of natural language, effectively bridging the gap between static automation and dynamic AI agents.
+
+\subsection{Constraint Engineering in Probabilistic Systems}
+
+Working with Large Language Models introduces non-determinism---a critical risk when controlling live audio software where a hallucinated command could corrupt a session. This project shifted our focus from simple ``Prompt Engineering'' (trying to persuade the model) to \textbf{Constraint Engineering} (forcing the model to obey syntax).
+
+By utilizing libraries like Marvin and Pydantic to enforce strict schema validation \textit{before} any command reaches the OSC layer, we learned to treat the LLM not as a magic box, but as an untrusted component that requires rigorous sanitation. This meta-skill involves designing ``guardrails'' that allow for creative expression while mathematically guaranteeing system stability.
+
+\subsection{Semantic Mapping of Abstract Domains}
+
+A significant challenge was translating vague human artistic intent (e.g., ``make it punchier'') into precise numerical parameters (e.g., ``set Compressor Ratio to 4:1, Attack to 10ms''). This required developing the skill of \textbf{Domain-Specific Abstraction}.
+
+We had to codify the tacit knowledge of a music producer into a structured logic that a machine could parse. This went beyond coding; it required analyzing the ``physics'' of music production and creating a translation layer that maps qualitative adjectives to quantitative signal processing commands. This experience highlighted the difficulty and necessity of grounding AI reasoning in domain-specific reality rather than general text patterns.

@@ -1,20 +1,20 @@
 # VIEW API - Example Prompts for Testing
 
-Use these prompts to validate the VIEW tools end-to-end. All indices are 0-based.
+Use these prompts to validate the VIEW tools end-to-end. All indices are 0-based. A subset of these prompts is also mirrored in `eval_prompts.csv` for automatic, binary success/failure evaluation.
 
 ## Selection Queries
 
-- "What track is currently selected?"
+- [EVAL] "What track is currently selected?"
 - "Which scene is selected right now?"
 - "Show the selected clip's track and scene indices"
 - "Which device is selected?"
 
 ## Selection Control
 
-- "Select track 2"
-- "Set the selected scene to scene 3"
-- "Select clip track 1 slot 4"
-- "Focus device 0 on track 2"
+- [EVAL] "Select track 2"
+- [EVAL] "Set the selected scene to scene 3"
+- [EVAL] "Select clip track 1 slot 4"
+- [EVAL] "Focus device 0 on track 2"
 
 ## Listening to Selection Changes
 
@@ -26,7 +26,7 @@ Use these prompts to validate the VIEW tools end-to-end. All indices are 0-based
 ## Multi-step Workflows
 
 - "Select track 1, then tell me which clip is selected"
-- "Select clip track 0 slot 2, then launch it"
+- [EVAL] "Select clip track 0 slot 2, then launch it"
 - "Focus device 0 on track 2, then increase the selected device's parameter 3" (requires DEVICE API afterwards)
 - "Start listening to selected track, then change to track 3"
 

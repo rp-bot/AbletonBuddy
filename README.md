@@ -2,6 +2,12 @@
 
 Your AI-powered command center for Ableton Live.
 
+## Demo Video
+
+Watch the demo video to see Ableton Buddy in action:
+
+[![Demo Video](final-report/figures/demo_video.mp4)](final-report/figures/demo_video.mp4)
+
 ## Description
 
 Ableton Buddy is a Python-based tool that allows you to interact with Ableton Live using natural language. It uses a large language model to understand your commands and translate them into actions in Ableton Live.
